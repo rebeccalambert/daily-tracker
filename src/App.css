@@ -1,0 +1,621 @@
+.settings {
+  max-width: 420px;
+  margin: 3rem auto;
+  padding: 0 1.5rem;
+}
+
+.settings-group {
+  margin-bottom: 2rem;
+}
+
+.settings-group h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: inherit;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.settings-group input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  background: transparent;
+  color: inherit;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saved-hint {
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+/* ---- App shell ---- */
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 22px 22px 10px;
+}
+
+.topbar .date {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.app-name {
+  font-family: Georgia, "Iowan Old Style", ui-serif, serif;
+  font-size: 15px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 16px;
+  padding: 2px 4px;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.35);
+  min-width: 160px;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: var(--surface-2);
+}
+
+.content {
+  flex: 1;
+  padding: 6px 22px 22px;
+}
+
+.tabbar {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 12px 0 14px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- Home ---- */
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+.main-task-card {
+  padding: 18px 0 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.main-task-text {
+  font-family: Georgia, "Iowan Old Style", ui-serif, serif;
+  font-size: 22px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.section {
+  border-bottom: 1px solid var(--line);
+}
+
+.section-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.chevron {
+  color: var(--muted);
+  font-size: 13px;
+  transition: transform 0.18s ease;
+}
+
+.section[data-open="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.section-body {
+  padding-bottom: 14px;
+}
+
+.prayer-list,
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prayer-item,
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--faint);
+  font-size: 14px;
+  margin-top: 2px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.prayer-item input[type="checkbox"],
+.todo-item input[type="checkbox"] {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.prayer-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.todo-item label {
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.name {
+  font-size: 14.5px;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.note {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.due {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.due.overdue {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.prayer-item.done .name,
+.prayer-item.done .tag,
+.prayer-item.done .note,
+.todo-item.done label {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.end-day-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 20px 0 6px;
+  cursor: pointer;
+}
+
+.tab-caption {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---- Tabs / Settings shared ---- */
+
+.tab-title {
+  font-family: Georgia, "Iowan Old Style", ui-serif, serif;
+  font-size: 20px;
+  margin: 8px 0 4px;
+}
+
+.group-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 18px 0 10px;
+}
+
+.add-btn {
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.add-form {
+  margin: 12px 0 16px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label input[type="text"],
+.field-label input[type="date"],
+.field-label select,
+.field-label textarea {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.primary-btn {
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.editable-label {
+  cursor: pointer;
+}
+
+.settings-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.status-dot.connected {
+  background: var(--accent);
+}
+
+/* ---- Modals ---- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 22, 20, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 30;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  padding: 26px 24px 30px;
+  box-shadow: 0 -20px 40px -20px rgba(0, 0, 0, 0.3);
+}
+
+.sheet h2 {
+  font-family: Georgia, "Iowan Old Style", ui-serif, serif;
+  font-size: 19px;
+  margin: 0 0 4px;
+}
+
+.sheet .sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+
+.detected-task {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.detected-task .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.detected-task .value {
+  font-family: Georgia, "Iowan Old Style", ui-serif, serif;
+  font-size: 18px;
+  margin: 0;
+}
+
+.sheet input[type="text"] {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ghost-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.yesno {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.yesno button {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.yesno button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.recap-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recap-list li {
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.recap-list.accomplished li span:first-child {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.auto-note {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin: 2px 0 8px;
+}
+
+.review-block {
+  margin-bottom: 20px;
+}
+
+.triage-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.triage-item .triage-name {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.triage {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.triage button {
+  font-size: 11.5px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.triage button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.sheet textarea {
+  width: 100%;
+  min-height: 70px;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.mark-done-btn,
+.undo-check {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mark-done-btn:hover,
+.undo-check:hover {
+  text-decoration: underline;
+}
