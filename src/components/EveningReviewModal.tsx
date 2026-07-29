@@ -80,30 +80,38 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose 
     setSheetWarning(false)
     try {
       if (!triageApplied) {
-        for (const item of todoNeedsDecision) {
-          const choice = todoTriage[item.id] ?? 'next'
-          if (choice === 'done') {
-            await completeHabiticaTask(item.id)
-          } else if (choice === 'next') {
-            await updateHabiticaTodo(item.id, { date: addDays(today, 1) })
+        try {
+          for (const item of todoNeedsDecision) {
+            const choice = todoTriage[item.id] ?? 'next'
+            if (choice === 'done') {
+              await completeHabiticaTask(item.id)
+            } else if (choice === 'next') {
+              await updateHabiticaTodo(item.id, { date: addDays(today, 1) })
+            }
           }
-        }
 
-        for (const p of prayerNeedsDecision) {
-          const choice = prayerTriage[p.id] ?? 'next'
-          if (choice === 'done') {
-            markPrayerDoneNow(p.id)
-          } else if (choice === 'next' && p.type === 'date') {
-            savePrayerRequest({ ...p, dateValue: addDays(p.dateValue || today, 1) })
+          for (const p of prayerNeedsDecision) {
+            const choice = prayerTriage[p.id] ?? 'next'
+            if (choice === 'done') {
+              markPrayerDoneNow(p.id)
+            } else if (choice === 'next' && p.type === 'date') {
+              savePrayerRequest({ ...p, dateValue: addDays(p.dateValue || today, 1) })
+            }
+            // weekly 'next'/'today': no date to bump — it naturally reappears on its next matching weekday.
           }
-          // weekly 'next'/'today': no date to bump — it naturally reappears on its next matching weekday.
-        }
 
-        if (daily.mainTaskCompleted === false && daily.mainTaskText.trim()) {
-          await createHabiticaTodo(daily.mainTaskText.trim(), addDays(today, 1))
-        }
+          if (daily.mainTaskCompleted === false && daily.mainTaskText.trim()) {
+            await createHabiticaTodo(daily.mainTaskText.trim(), addDays(today, 1))
+          }
 
-        setTriageApplied(true)
+          setTriageApplied(true)
+        } catch (err) {
+          // A Habitica/prayer triage call failing (stale task id, network blip, etc.) used to
+          // throw straight out of handleSave, which skipped saveDailyLog entirely — so "Save &
+          // log day" would silently do nothing and no row would append. Triage is best-effort;
+          // it must never block today's log from reaching the Sheet.
+          console.error('[evening-review] triage step failed, continuing to log the day anyway', err)
+        }
       }
 
       const { sheetSaved } = await saveDailyLog({
@@ -126,6 +134,12 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose 
         // write failed, so stay open and let her know rather than silently losing that part.
         setSheetWarning(true)
       }
+    } catch (err) {
+      // Anything else unexpected (e.g. saveDailyLog itself throwing) must still surface — this
+      // used to escape uncaught, leaving the UI looking like the click did nothing while no row
+      // was ever appended.
+      console.error('[evening-review] save failed', err)
+      setSheetWarning(true)
     } finally {
       setSaving(false)
     }
