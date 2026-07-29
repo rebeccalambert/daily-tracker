@@ -41,6 +41,8 @@ A recurring personal pain point: no single daily record of what got done, what d
 - A calendar section beyond just main-task detection
 - A memory verse section
 - A possible "people notes" feature (self-contained, not connected to the real Contacts app — iOS doesn't expose that to web apps at all)
+- Multi-device gap detection for the missed-day catch-up review: it currently tracks the "last logged day" in local browser storage rather than reading it back from the Sheet, so a second device won't know what a first device already logged and could show a redundant catch-up prompt. Not worth building around unless multi-device use actually happens.
+- `npm audit` vulnerabilities in `vite-plugin-pwa`'s transitive dev dependency chain (`workbox-build` → `rollup-plugin-off-main-thread` → `ejs` → `jake` → `filelist` → `minimatch`, a brace-expansion DoS). Dev-only build dependency, not shipped to production; fixing it requires a breaking `vite-plugin-pwa` upgrade.
 
 ## Architecture
 
