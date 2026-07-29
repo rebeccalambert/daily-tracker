@@ -137,6 +137,7 @@ button:disabled {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 6px 22px 22px;
 }
 
