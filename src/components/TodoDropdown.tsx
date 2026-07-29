@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import SortableList from './SortableList'
 import type { TodoItem } from '../types'
 import { formatDue, todayISO } from '../lib/date'
@@ -6,12 +5,13 @@ import { formatDue, todayISO } from '../lib/date'
 interface TodoDropdownProps {
   todos: TodoItem[]
   order: string[]
+  open: boolean
+  onToggleOpen: () => void
   onToggle: (item: TodoItem) => void
   onReorder: (newOrder: string[]) => void
 }
 
-export default function TodoDropdown({ todos, order, onToggle, onReorder }: TodoDropdownProps) {
-  const [open, setOpen] = useState(false)
+export default function TodoDropdown({ todos, order, open, onToggleOpen, onToggle, onReorder }: TodoDropdownProps) {
   const today = todayISO()
 
   const byId = new Map(todos.map(t => [t.id, t]))
@@ -24,7 +24,7 @@ export default function TodoDropdown({ todos, order, onToggle, onReorder }: Todo
 
   return (
     <div className="section" data-open={open}>
-      <button className="section-header" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <button className="section-header" aria-expanded={open} onClick={onToggleOpen}>
         To-Dos <span className="chevron">›</span>
       </button>
       {open && (

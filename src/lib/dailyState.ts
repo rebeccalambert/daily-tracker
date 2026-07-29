@@ -6,7 +6,11 @@ function key(date: string): string {
 }
 
 export function getDailyState(date: string): DailyState {
-  return getItem<DailyState>(key(date), emptyDailyState(date))
+  // Merge over emptyDailyState rather than using it only as a getItem fallback: a stored blob
+  // from before a new DailyState field existed is still valid JSON (getItem's fallback only
+  // kicks in when the key is missing entirely), so without this merge, older/existing stored
+  // days would resolve new fields to `undefined` instead of their real default.
+  return { ...emptyDailyState(date), ...getItem<Partial<DailyState>>(key(date), {}) }
 }
 
 export function saveDailyState(state: DailyState): void {

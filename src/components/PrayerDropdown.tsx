@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import SortableList from './SortableList'
 import type { PrayerRequest } from '../types'
 
@@ -6,13 +5,21 @@ interface PrayerDropdownProps {
   prayers: PrayerRequest[]
   completedIds: string[]
   order: string[]
+  open: boolean
+  onToggleOpen: () => void
   onToggle: (id: string) => void
   onReorder: (newOrder: string[]) => void
 }
 
-export default function PrayerDropdown({ prayers, completedIds, order, onToggle, onReorder }: PrayerDropdownProps) {
-  const [open, setOpen] = useState(false)
-
+export default function PrayerDropdown({
+  prayers,
+  completedIds,
+  order,
+  open,
+  onToggleOpen,
+  onToggle,
+  onReorder,
+}: PrayerDropdownProps) {
   const byId = new Map(prayers.map(p => [p.id, p]))
   const orderedIds = order.filter(id => byId.has(id))
   const missingIds = prayers.map(p => p.id).filter(id => !orderedIds.includes(id))
@@ -23,7 +30,7 @@ export default function PrayerDropdown({ prayers, completedIds, order, onToggle,
 
   return (
     <div className="section" data-open={open}>
-      <button className="section-header" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <button className="section-header" aria-expanded={open} onClick={onToggleOpen}>
         Prayer Request <span className="chevron">›</span>
       </button>
       {open && (

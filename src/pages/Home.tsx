@@ -67,6 +67,8 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
         prayers={prayers}
         completedIds={daily.completedPrayerIds}
         order={daily.homePrayerOrder}
+        open={daily.homePrayerOpen}
+        onToggleOpen={() => persist({ homePrayerOpen: !daily.homePrayerOpen })}
         onToggle={togglePrayer}
         onReorder={newOrder => persist({ homePrayerOrder: newOrder })}
       />
@@ -79,6 +81,8 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
         <TodoDropdown
           todos={homeTodos}
           order={daily.homeTodoOrder}
+          open={daily.homeTodoOpen}
+          onToggleOpen={() => persist({ homeTodoOpen: !daily.homeTodoOpen })}
           onToggle={toggleTodo}
           onReorder={newOrder => persist({ homeTodoOrder: newOrder })}
         />
