@@ -35,6 +35,10 @@ export interface DailyState {
   blockersNotes: string
   gratitude: string
   eveningReviewDone: boolean
+  /** Whether the Home screen's Prayer Request / To-Dos accordions are expanded — persisted so
+   * switching tabs and coming back doesn't collapse a section the user had open. */
+  homePrayerOpen: boolean
+  homeTodoOpen: boolean
 }
 
 export function emptyDailyState(date: string): DailyState {
@@ -49,5 +53,7 @@ export function emptyDailyState(date: string): DailyState {
     blockersNotes: '',
     gratitude: '',
     eveningReviewDone: false,
+    homePrayerOpen: false,
+    homeTodoOpen: false,
   }
 }
