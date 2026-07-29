@@ -9,6 +9,26 @@ export function weekdayName(dateISO: string): string {
   return WEEKDAYS[new Date(`${dateISO}T00:00:00`).getDay()]
 }
 
+/** Returns the ISO date `days` away from `dateISO` (negative goes backward). */
+export function addDays(dateISO: string, days: number): string {
+  const d = new Date(`${dateISO}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Formats the "Date" cell written to the Sheets log: the calendar day being reviewed, plus the
+ * real-world clock time the row was actually submitted. Keeping both means a catch-up review
+ * (logged under a past day, submitted "now") still records true submission order relative to
+ * other rows — and multiple rows for the same calendar day (re-saves, catch-up vs. same-day)
+ * stay distinguishable.
+ */
+export function formatLogTimestamp(dateISO: string, submittedAt: Date = new Date()): string {
+  const hh = String(submittedAt.getHours()).padStart(2, '0')
+  const mm = String(submittedAt.getMinutes()).padStart(2, '0')
+  return `${dateISO} (${weekdayName(dateISO).slice(0, 3)}) ${hh}:${mm}`
+}
+
 export function formatShortDate(dateISO: string): string {
   return new Date(`${dateISO}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }

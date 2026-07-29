@@ -7,8 +7,8 @@ import HamburgerMenu from './components/HamburgerMenu'
 import MorningModal from './components/MorningModal'
 import EveningReviewModal from './components/EveningReviewModal'
 import { getHabiticaCredentials } from './lib/habitica'
-import { getDailyState, updateDailyState } from './lib/dailyState'
-import { todayISO } from './lib/date'
+import { getDailyState, updateDailyState, getLastLoggedDate } from './lib/dailyState'
+import { todayISO, addDays } from './lib/date'
 import type { DailyState } from './types'
 import './App.css'
 
@@ -27,9 +27,21 @@ function App() {
   // this rather than each independently touching storage, since a modal renders on top of
   // Home (not instead of it) and Home would otherwise show stale data after a modal action.
   const [daily, setDaily] = useState<DailyState>(() => getDailyState(today))
+  // Non-null while showing a catch-up evening review (a gap was detected on load) — the ISO
+  // date of the missed day being reviewed. Kept separate from `daily`/`today` on purpose: the
+  // catch-up review reads/writes the missed day's own DailyState (so marking it
+  // eveningReviewDone doesn't falsely mark *today's* review done too, which would stop today's
+  // own 5pm auto-trigger from ever firing).
+  const [catchupDate, setCatchupDate] = useState<string | null>(null)
+  const [catchupDaily, setCatchupDaily] = useState<DailyState | null>(null)
 
   function persistDaily(patch: Partial<DailyState>) {
     setDaily(updateDailyState(today, patch))
+  }
+
+  function persistCatchup(patch: Partial<DailyState>) {
+    if (!catchupDate) return
+    setCatchupDaily(updateDailyState(catchupDate, patch))
   }
 
   function checkDailyPrompts() {
@@ -47,6 +59,21 @@ function App() {
       setTab('settings')
       return
     }
+
+    // Gap detection: compare today to the last day that actually finished a Sheets append (not
+    // just the last day the app was opened). `null` means never logged anything yet (first-ever
+    // use) — that must NOT be treated as a gap. Only a last-logged day strictly before yesterday
+    // means at least one full day was skipped with no evening review completed.
+    const lastLogged = getLastLoggedDate()
+    const yesterday = addDays(today, -1)
+    if (lastLogged && lastLogged < yesterday) {
+      const missedDay = addDays(lastLogged, 1)
+      setCatchupDate(missedDay)
+      setCatchupDaily(getDailyState(missedDay))
+      setShowEvening(true)
+      return
+    }
+
     checkDailyPrompts()
     // Only meant to run once on load — deliberately not re-running when `daily` changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,6 +91,20 @@ function App() {
   function handleMorningConfirm(text: string, source: 'calendar' | 'manual') {
     persistDaily({ mainTaskText: text, mainTaskSource: source })
     setShowMorning(false)
+  }
+
+  function handleEveningClose() {
+    setShowEvening(false)
+    if (catchupDate) {
+      // Catch-up review just closed (saved or dismissed) — chain straight into today's normal
+      // flow instead of dropping back to Home. `daily` (today's state) was never touched by the
+      // catch-up review, so mainTaskSource is still unset and this opens MorningModal with no
+      // extra tap needed. If she dismissed without saving, the gap simply reappears next launch
+      // since lastLoggedDate wasn't advanced.
+      setCatchupDate(null)
+      setCatchupDaily(null)
+      checkDailyPrompts()
+    }
   }
 
   return (
@@ -93,7 +134,17 @@ function App() {
       </nav>
 
       {showMorning && <MorningModal onConfirm={handleMorningConfirm} />}
-      {showEvening && <EveningReviewModal daily={daily} onPersist={persistDaily} onClose={() => setShowEvening(false)} />}
+      {showEvening &&
+        (catchupDate ? (
+          <EveningReviewModal
+            daily={catchupDaily ?? getDailyState(catchupDate)}
+            onPersist={persistCatchup}
+            reviewDate={catchupDate}
+            onClose={handleEveningClose}
+          />
+        ) : (
+          <EveningReviewModal daily={daily} onPersist={persistDaily} onClose={handleEveningClose} />
+        ))}
     </div>
   )
 }

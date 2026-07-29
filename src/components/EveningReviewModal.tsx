@@ -7,27 +7,33 @@ import {
   uncompleteHabiticaTask,
   createHabiticaTodo,
 } from '../lib/habitica'
-import { todayISO } from '../lib/date'
+import { todayISO, addDays, weekdayName, formatShortDate } from '../lib/date'
 import { isTodoRelevantOnHome } from '../lib/homeVisibility'
 import { saveDailyLog } from '../lib/dailyLog'
+import { setLastLoggedDate } from '../lib/dailyState'
 import type { PrayerRequest, TodoItem, DailyState } from '../types'
 
 interface EveningReviewModalProps {
   daily: DailyState
   onPersist: (patch: Partial<DailyState>) => void
   onClose: () => void
+  /** ISO date this review logs under. Omit for a normal same-day review (defaults to today).
+   * Pass a past date to run this as a catch-up review for a day that got skipped — the modal
+   * shows a "reviewing [date]" label and the Sheets row is dated that day instead of today. */
+  reviewDate?: string
 }
 
 type Triage = 'next' | 'today' | 'done'
 
-function addDays(dateISO: string, days: number): string {
-  const d = new Date(`${dateISO}T00:00:00`)
-  d.setDate(d.getDate() + days)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-export default function EveningReviewModal({ daily, onPersist: persist, onClose }: EveningReviewModalProps) {
+export default function EveningReviewModal({ daily, onPersist: persist, onClose, reviewDate }: EveningReviewModalProps) {
   const today = todayISO()
+  // The day this review's row gets logged under — today normally, or the missed day when this
+  // is a catch-up review. Deliberately separate from `today`: all triage below (which todos/
+  // prayers are outstanding, "next day" bump targets) still operates on real current state,
+  // per product decision that catch-up reuses current app/Habitica state rather than
+  // reconstructing per-missed-day history.
+  const logDate = reviewDate ?? today
+  const isCatchup = logDate !== today
   const [prayers] = useState<PrayerRequest[]>(() =>
     getAllPrayerRequests().filter(p => isPrayerRelevantToday(p, today))
   )
@@ -115,7 +121,7 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose 
       }
 
       const { sheetSaved } = await saveDailyLog({
-        date: today,
+        date: logDate,
         mainTask: daily.mainTaskText,
         mainTaskCompleted: daily.mainTaskCompleted,
         todosDone: todoAccomplished.map(t => t.text),
@@ -128,6 +134,10 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose 
 
       persist({ eveningReviewDone: true })
       if (sheetSaved) {
+        // Only advance the "last logged day" marker on a confirmed Sheets write — it's what
+        // gap-detection on next load trusts, so it must track what's actually in the Sheet,
+        // not just what we tried to save.
+        setLastLoggedDate(logDate)
         onClose()
       } else {
         // Everything else (Habitica triage, local backup) already succeeded — only the Sheets
@@ -151,6 +161,11 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose 
     <div className="overlay">
       <div className="sheet">
         <h2>Evening review</h2>
+        {isCatchup && (
+          <p className="sub">
+            Catching up — reviewing {weekdayName(logDate)}, {formatShortDate(logDate)}
+          </p>
+        )}
 
         <p className="eyebrow">Today's intention</p>
         <div className="detected-task">
