@@ -111,7 +111,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <span className="date">{formattedToday()}</span>
-        <HamburgerMenu onSelectSettings={() => setTab('settings')} />
+        <HamburgerMenu onSelectSettings={() => setTab('settings')} onSelectPrayer={() => setTab('prayer')} />
       </header>
 
       <main className="content">
@@ -124,9 +124,6 @@ function App() {
       <nav className="tabbar">
         <button className={`tab-btn${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
           Home
-        </button>
-        <button className={`tab-btn${tab === 'prayer' ? ' active' : ''}`} onClick={() => setTab('prayer')}>
-          Prayer
         </button>
         <button className={`tab-btn${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
           To-Dos
