@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getItem, setItem } from '../lib/storage'
 import type { HabiticaCredentials } from '../lib/habitica'
 import { connectGoogle, disconnectGoogle, isGoogleConnected } from '../lib/googleAuth'
+import { getDailyLogSheetUrl } from '../lib/sheets'
 
 interface SettingsProps {
   /** Called after a save — lets the app re-run its "does today need a morning/evening prompt" check, since that only runs once on load otherwise. */
@@ -17,6 +18,7 @@ export default function Settings({ onConnectionsChanged }: SettingsProps) {
 
   const [googleConnected, setGoogleConnected] = useState(isGoogleConnected())
   const [googleStatus, setGoogleStatus] = useState<'idle' | 'connecting' | 'error'>('idle')
+  const sheetUrl = getDailyLogSheetUrl()
 
   function handleSave() {
     setItem('habiticaCredentials', { userId, apiToken })
@@ -85,6 +87,11 @@ export default function Settings({ onConnectionsChanged }: SettingsProps) {
         )}
         {googleStatus === 'error' && (
           <p className="tab-caption">Couldn't connect — closed the popup, or something went wrong. Try again.</p>
+        )}
+        {googleConnected && sheetUrl && (
+          <a className="tab-caption" href={sheetUrl} target="_blank" rel="noreferrer">
+            Open Daily Tracker Log in Google Sheets ↗
+          </a>
         )}
       </div>
     </section>

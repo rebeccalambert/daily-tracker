@@ -21,6 +21,15 @@ function getStoredSheetId(): string | null {
   return getItem<string | null>(SHEET_ID_KEY, null)
 }
 
+/** URL of the actual spreadsheet this app has been appending rows to, or null if it hasn't
+ * created/found one yet. Surfaced in Settings so it's unambiguous which document to check —
+ * `getOrCreateSpreadsheetId` silently creates a new "Daily Tracker Log" spreadsheet if the
+ * previously stored one is ever missing/unreachable, so more than one can exist over time. */
+export function getDailyLogSheetUrl(): string | null {
+  const id = getStoredSheetId()
+  return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null
+}
+
 async function logFailure(label: string, res: Response): Promise<void> {
   const body = await res.text().catch(() => '<unreadable>')
   console.error(`[sheets] ${label} failed: ${res.status} ${res.statusText}`, body)
