@@ -5,7 +5,11 @@ import { todayISO } from '../lib/date'
 
 const HOUR_HEIGHT = 56
 const MIN_EVENT_HEIGHT = 22
-const STACK_OFFSET = 14
+// Percentage of the grid's width, not pixels: with .timed-event's fixed `right: 4px`, a small
+// fixed-pixel offset barely uncovers the card underneath (a higher stackIndex, higher z-index
+// card nearly fully hides the one below it). A percentage-based offset keeps both readable while
+// still being simple sequential stacking, not true concurrent-column math.
+const STACK_OFFSET_PERCENT = 26
 
 function hourLabel(h: number): string {
   if (h === 0) return '12 AM'
@@ -141,7 +145,12 @@ export default function CalendarTab() {
                 <button
                   key={e.id}
                   className="timed-event"
-                  style={{ top: e.top, height: e.height, left: e.stackIndex * STACK_OFFSET, zIndex: 10 + e.stackIndex }}
+                  style={{
+                    top: e.top,
+                    height: e.height,
+                    left: `${e.stackIndex * STACK_OFFSET_PERCENT}%`,
+                    zIndex: 10 + e.stackIndex,
+                  }}
                   onClick={() => setSelected(e)}
                 >
                   <span className="timed-event-title">{e.title}</span>
