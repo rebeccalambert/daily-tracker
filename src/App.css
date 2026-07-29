@@ -652,6 +652,131 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+/* ---- Calendar day view ---- */
+
+.day-view {
+  margin-top: 10px;
+}
+
+.allday-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.allday-row-label {
+  flex-shrink: 0;
+  width: 42px;
+  padding-top: 5px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.allday-events {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.allday-event {
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.hour-grid-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hour-grid {
+  position: relative;
+  margin-left: 42px;
+}
+
+.hour-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+  height: 0;
+}
+
+.hour-row:first-child {
+  border-top: none;
+}
+
+.hour-label {
+  position: absolute;
+  top: -7px;
+  left: -42px;
+  width: 36px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+.timed-event {
+  position: absolute;
+  right: 4px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 3px 8px;
+  overflow: hidden;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.timed-event-title {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timed-event-time {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 2px solid var(--warn);
+  z-index: 20;
+}
+
+.now-dot {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
 .mark-done-btn,
 .undo-check {
   background: none;
