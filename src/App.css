@@ -61,12 +61,15 @@ button:disabled {
 .app {
   max-width: 480px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .topbar {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -131,10 +134,14 @@ button:disabled {
 
 .content {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 6px 22px 22px;
 }
 
 .tabbar {
+  flex-shrink: 0;
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--surface);
