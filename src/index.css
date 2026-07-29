@@ -32,8 +32,22 @@
   box-sizing: border-box;
 }
 
+/* iOS Safari (including standalone/Add-to-Home-Screen mode) rubber-bands/bounce-scrolls the
+ * whole page by default, even when an inner element is capped to the viewport height -- that
+ * bounce can drag the entire .app shell around and expose blank space where the sticky tabbar
+ * should be. Pinning html/body to the viewport with position: fixed forces all scrolling to
+ * happen only inside .content (see App.css), which is the standard fix for this. */
+html,
 body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
+}
+
+body {
   background: var(--bg);
   color: var(--ink);
 }
