@@ -11,6 +11,7 @@ import { todayISO, addDays, weekdayName, formatShortDate } from '../lib/date'
 import { isTodoRelevantOnHome } from '../lib/homeVisibility'
 import { saveDailyLog } from '../lib/dailyLog'
 import { setLastLoggedDate } from '../lib/dailyState'
+import type { FeatureKey } from '../lib/featureVisibility'
 import type { PrayerRequest, TodoItem, DailyState } from '../types'
 
 interface EveningReviewModalProps {
@@ -21,11 +22,18 @@ interface EveningReviewModalProps {
    * Pass a past date to run this as a catch-up review for a day that got skipped — the modal
    * shows a "reviewing [date]" label and the Sheets row is dated that day instead of today. */
   reviewDate?: string
+  visibility: Record<FeatureKey, boolean>
 }
 
 type Triage = 'next' | 'today' | 'done'
 
-export default function EveningReviewModal({ daily, onPersist: persist, onClose, reviewDate }: EveningReviewModalProps) {
+export default function EveningReviewModal({
+  daily,
+  onPersist: persist,
+  onClose,
+  reviewDate,
+  visibility,
+}: EveningReviewModalProps) {
   const today = todayISO()
   // The day this review's row gets logged under — today normally, or the missed day when this
   // is a catch-up review. Deliberately separate from `today`: all triage below (which todos/
@@ -34,8 +42,11 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose,
   // reconstructing per-missed-day history.
   const logDate = reviewDate ?? today
   const isCatchup = logDate !== today
+  // A hidden feature is treated as fully inert here, not just visually hidden: its data source
+  // is never read, so its accomplished/needs-decision/auto lists all resolve to empty, which is
+  // exactly what saveDailyLog needs to leave that feature's Sheet column blank for the day.
   const [prayers] = useState<PrayerRequest[]>(() =>
-    getAllPrayerRequests().filter(p => isPrayerRelevantToday(p, today))
+    visibility.prayer ? getAllPrayerRequests().filter(p => isPrayerRelevantToday(p, today)) : []
   )
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [todoTriage, setTodoTriage] = useState<Record<string, Triage>>({})
@@ -47,10 +58,14 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose,
   const [triageApplied, setTriageApplied] = useState(false)
 
   useEffect(() => {
+    if (!visibility.todos) {
+      setTodos([])
+      return
+    }
     getTodayTodos()
       .then(list => setTodos(list.filter(t => isTodoRelevantOnHome(t, today))))
       .catch(() => setTodos([]))
-  }, [today])
+  }, [today, visibility.todos])
 
   const todoAccomplished = todos.filter(t => t.completed)
   const todoNeedsDecision = todos.filter(t => !t.completed && t.type === 'todo')
@@ -180,114 +195,123 @@ export default function EveningReviewModal({ daily, onPersist: persist, onClose,
           </button>
         </div>
 
-        <div className="review-block">
-          <p className="eyebrow">
-            To-Dos — {todoAccomplished.length} of {todos.length} done
-          </p>
-          <ul className="recap-list accomplished">
-            {todoAccomplished.map(t => (
-              <li key={t.id}>
-                <span>{t.text}</span>
-                <button type="button" className="undo-check" aria-label="Undo, mark not done" onClick={() => undoTodo(t)}>
-                  ✓
-                </button>
-              </li>
-            ))}
-          </ul>
-          <ul className="triage-list">
-            {todoNeedsDecision.map(t => (
-              <li key={t.id} className="triage-item">
-                <div className="triage-name">{t.text}</div>
-                <div className="triage">
-                  {(['next', 'today', 'done'] as Triage[]).map(choice => (
-                    <button
-                      key={choice}
-                      aria-pressed={(todoTriage[t.id] ?? 'next') === choice}
-                      onClick={() => {
-                        setTodoTriage(prev => ({ ...prev, [t.id]: choice }))
-                        if (choice === 'done') markTodoDoneNow(t)
-                      }}
-                    >
-                      {triageLabel[choice]}
-                    </button>
+        {visibility.todos && (
+          <div className="review-block">
+            <p className="eyebrow">
+              To-Dos — {todoAccomplished.length} of {todos.length} done
+            </p>
+            <ul className="recap-list accomplished">
+              {todoAccomplished.map(t => (
+                <li key={t.id}>
+                  <span>{t.text}</span>
+                  <button
+                    type="button"
+                    className="undo-check"
+                    aria-label="Undo, mark not done"
+                    onClick={() => undoTodo(t)}
+                  >
+                    ✓
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <ul className="triage-list">
+              {todoNeedsDecision.map(t => (
+                <li key={t.id} className="triage-item">
+                  <div className="triage-name">{t.text}</div>
+                  <div className="triage">
+                    {(['next', 'today', 'done'] as Triage[]).map(choice => (
+                      <button
+                        key={choice}
+                        aria-pressed={(todoTriage[t.id] ?? 'next') === choice}
+                        onClick={() => {
+                          setTodoTriage(prev => ({ ...prev, [t.id]: choice }))
+                          if (choice === 'done') markTodoDoneNow(t)
+                        }}
+                      >
+                        {triageLabel[choice]}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {todoAuto.length > 0 && (
+              <>
+                <p className="auto-note">Dailies reset automatically — mark done if you got to it</p>
+                <ul className="recap-list">
+                  {todoAuto.map(t => (
+                    <li key={t.id}>
+                      <span>{t.text}</span>
+                      <button type="button" className="mark-done-btn" onClick={() => markTodoDoneNow(t)}>
+                        Mark done
+                      </button>
+                    </li>
                   ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-          {todoAuto.length > 0 && (
-            <>
-              <p className="auto-note">Dailies reset automatically — mark done if you got to it</p>
-              <ul className="recap-list">
-                {todoAuto.map(t => (
-                  <li key={t.id}>
-                    <span>{t.text}</span>
-                    <button type="button" className="mark-done-btn" onClick={() => markTodoDoneNow(t)}>
-                      Mark done
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+                </ul>
+              </>
+            )}
+          </div>
+        )}
 
-        <div className="review-block">
-          <p className="eyebrow">
-            Prayer Requests — {prayerAccomplished.length} of {prayers.length} done
-          </p>
-          <ul className="recap-list accomplished">
-            {prayerAccomplished.map(p => (
-              <li key={p.id}>
-                <span>{p.name}</span>
-                <button
-                  type="button"
-                  className="undo-check"
-                  aria-label="Undo, mark not done"
-                  onClick={() => undoPrayer(p.id)}
-                >
-                  ✓
-                </button>
-              </li>
-            ))}
-          </ul>
-          <ul className="triage-list">
-            {prayerNeedsDecision.map(p => (
-              <li key={p.id} className="triage-item">
-                <div className="triage-name">{p.name}</div>
-                <div className="triage">
-                  {(['next', 'today', 'done'] as Triage[]).map(choice => (
-                    <button
-                      key={choice}
-                      aria-pressed={(prayerTriage[p.id] ?? 'next') === choice}
-                      onClick={() => {
-                        setPrayerTriage(prev => ({ ...prev, [p.id]: choice }))
-                        if (choice === 'done') markPrayerDoneNow(p.id)
-                      }}
-                    >
-                      {triageLabel[choice]}
-                    </button>
+        {visibility.prayer && (
+          <div className="review-block">
+            <p className="eyebrow">
+              Prayer Requests — {prayerAccomplished.length} of {prayers.length} done
+            </p>
+            <ul className="recap-list accomplished">
+              {prayerAccomplished.map(p => (
+                <li key={p.id}>
+                  <span>{p.name}</span>
+                  <button
+                    type="button"
+                    className="undo-check"
+                    aria-label="Undo, mark not done"
+                    onClick={() => undoPrayer(p.id)}
+                  >
+                    ✓
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <ul className="triage-list">
+              {prayerNeedsDecision.map(p => (
+                <li key={p.id} className="triage-item">
+                  <div className="triage-name">{p.name}</div>
+                  <div className="triage">
+                    {(['next', 'today', 'done'] as Triage[]).map(choice => (
+                      <button
+                        key={choice}
+                        aria-pressed={(prayerTriage[p.id] ?? 'next') === choice}
+                        onClick={() => {
+                          setPrayerTriage(prev => ({ ...prev, [p.id]: choice }))
+                          if (choice === 'done') markPrayerDoneNow(p.id)
+                        }}
+                      >
+                        {triageLabel[choice]}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {prayerAuto.length > 0 && (
+              <>
+                <p className="auto-note">Recurs daily — mark done if you got to it</p>
+                <ul className="recap-list">
+                  {prayerAuto.map(p => (
+                    <li key={p.id}>
+                      <span>{p.name}</span>
+                      <button type="button" className="mark-done-btn" onClick={() => markPrayerDoneNow(p.id)}>
+                        Mark done
+                      </button>
+                    </li>
                   ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-          {prayerAuto.length > 0 && (
-            <>
-              <p className="auto-note">Recurs daily — mark done if you got to it</p>
-              <ul className="recap-list">
-                {prayerAuto.map(p => (
-                  <li key={p.id}>
-                    <span>{p.name}</span>
-                    <button type="button" className="mark-done-btn" onClick={() => markPrayerDoneNow(p.id)}>
-                      Mark done
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+                </ul>
+              </>
+            )}
+          </div>
+        )}
 
         <p className="eyebrow">Anything take too long, or get blocked?</p>
         <textarea

@@ -3,13 +3,22 @@ import { getItem, setItem } from '../lib/storage'
 import type { HabiticaCredentials } from '../lib/habitica'
 import { connectGoogle, disconnectGoogle, isGoogleConnected } from '../lib/googleAuth'
 import { getDailyLogSheetUrl } from '../lib/sheets'
+import { getFeatureVisibility, setFeatureVisibility, type FeatureKey } from '../lib/featureVisibility'
 
 interface SettingsProps {
   /** Called after a save — lets the app re-run its "does today need a morning/evening prompt" check, since that only runs once on load otherwise. */
   onConnectionsChanged?: () => void
+  /** Called after a feature toggle — lets the app re-read visibility so Home/menu/tabbar update immediately instead of only on next reload. */
+  onVisibilityChanged?: () => void
 }
 
-export default function Settings({ onConnectionsChanged }: SettingsProps) {
+const FEATURE_LABELS: Record<FeatureKey, string> = {
+  prayer: 'Prayer Requests',
+  todos: 'To-Dos',
+  calendar: 'Calendar',
+}
+
+export default function Settings({ onConnectionsChanged, onVisibilityChanged }: SettingsProps) {
   const saved = getItem<HabiticaCredentials>('habiticaCredentials', { userId: '', apiToken: '' })
   const [userId, setUserId] = useState(saved.userId)
   const [apiToken, setApiToken] = useState(saved.apiToken)
@@ -19,6 +28,14 @@ export default function Settings({ onConnectionsChanged }: SettingsProps) {
   const [googleConnected, setGoogleConnected] = useState(isGoogleConnected())
   const [googleStatus, setGoogleStatus] = useState<'idle' | 'connecting' | 'error'>('idle')
   const sheetUrl = getDailyLogSheetUrl()
+
+  const [visibility, setVisibility] = useState(getFeatureVisibility())
+
+  function handleVisibilityToggle(key: FeatureKey, value: boolean) {
+    setFeatureVisibility(key, value)
+    setVisibility(getFeatureVisibility())
+    onVisibilityChanged?.()
+  }
 
   function handleSave() {
     setItem('habiticaCredentials', { userId, apiToken })
@@ -93,6 +110,21 @@ export default function Settings({ onConnectionsChanged }: SettingsProps) {
             Open Daily Tracker Log in Google Sheets ↗
           </a>
         )}
+      </div>
+
+      <div className="settings-group">
+        <h3>Features</h3>
+        <p className="tab-caption">Turn a feature off to hide it everywhere without losing its data.</p>
+        {(Object.keys(FEATURE_LABELS) as FeatureKey[]).map(key => (
+          <label key={key} className="feature-toggle">
+            <input
+              type="checkbox"
+              checked={visibility[key]}
+              onChange={e => handleVisibilityToggle(key, e.target.checked)}
+            />
+            {FEATURE_LABELS[key]}
+          </label>
+        ))}
       </div>
     </section>
   )

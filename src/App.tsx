@@ -9,6 +9,7 @@ import MorningModal from './components/MorningModal'
 import EveningReviewModal from './components/EveningReviewModal'
 import { getHabiticaCredentials } from './lib/habitica'
 import { getDailyState, updateDailyState, getLastLoggedDate } from './lib/dailyState'
+import { getFeatureVisibility } from './lib/featureVisibility'
 import { todayISO, addDays } from './lib/date'
 import type { DailyState } from './types'
 import './App.css'
@@ -35,6 +36,7 @@ function App() {
   // own 5pm auto-trigger from ever firing).
   const [catchupDate, setCatchupDate] = useState<string | null>(null)
   const [catchupDaily, setCatchupDaily] = useState<DailyState | null>(null)
+  const [visibility, setVisibility] = useState(() => getFeatureVisibility())
 
   function persistDaily(patch: Partial<DailyState>) {
     setDaily(updateDailyState(today, patch))
@@ -89,6 +91,23 @@ function App() {
     }
   }
 
+  function handleVisibilityChanged() {
+    const next = getFeatureVisibility()
+    setVisibility(next)
+    // If she just hid the feature whose tab she's currently viewing (e.g. hides Prayer while on
+    // the Prayer tab), that tab has no menu/tabbar entry to get back to it — bounce to Home
+    // rather than leaving her stranded on now-inaccessible content.
+    const tabFeature: Partial<Record<Tab, keyof typeof next>> = {
+      prayer: 'prayer',
+      todos: 'todos',
+      calendar: 'calendar',
+    }
+    const feature = tabFeature[tab]
+    if (feature && !next[feature]) {
+      setTab('home')
+    }
+  }
+
   function handleMorningConfirm(text: string, source: 'calendar' | 'manual') {
     persistDaily({ mainTaskText: text, mainTaskSource: source })
     setShowMorning(false)
@@ -116,24 +135,32 @@ function App() {
           onSelectSettings={() => setTab('settings')}
           onSelectPrayer={() => setTab('prayer')}
           onSelectCalendar={() => setTab('calendar')}
+          showPrayer={visibility.prayer}
+          showCalendar={visibility.calendar}
         />
       </header>
 
       <main className="content">
-        {tab === 'home' && <Home daily={daily} onPersist={persistDaily} onEndDay={() => setShowEvening(true)} />}
+        {tab === 'home' && (
+          <Home daily={daily} onPersist={persistDaily} onEndDay={() => setShowEvening(true)} visibility={visibility} />
+        )}
         {tab === 'prayer' && <PrayerTab />}
         {tab === 'todos' && <TodosTab />}
         {tab === 'calendar' && <CalendarTab />}
-        {tab === 'settings' && <Settings onConnectionsChanged={handleConnectionsChanged} />}
+        {tab === 'settings' && (
+          <Settings onConnectionsChanged={handleConnectionsChanged} onVisibilityChanged={handleVisibilityChanged} />
+        )}
       </main>
 
       <nav className="tabbar">
         <button className={`tab-btn${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
           Home
         </button>
-        <button className={`tab-btn${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
-          To-Dos
-        </button>
+        {visibility.todos && (
+          <button className={`tab-btn${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
+            To-Dos
+          </button>
+        )}
       </nav>
 
       {showMorning && <MorningModal onConfirm={handleMorningConfirm} />}
@@ -144,9 +171,10 @@ function App() {
             onPersist={persistCatchup}
             reviewDate={catchupDate}
             onClose={handleEveningClose}
+            visibility={visibility}
           />
         ) : (
-          <EveningReviewModal daily={daily} onPersist={persistDaily} onClose={handleEveningClose} />
+          <EveningReviewModal daily={daily} onPersist={persistDaily} onClose={handleEveningClose} visibility={visibility} />
         ))}
     </div>
   )
