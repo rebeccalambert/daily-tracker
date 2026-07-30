@@ -16,13 +16,22 @@ function stripMainTaskPrefix(summary: string): string {
   return summary.replace(MAIN_TASK_PREFIX, '').trim()
 }
 
+/** Start-of-day/end-of-day ISO instants for a given local date, used as timeMin/timeMax across
+ * every Calendar API call in this app (single-calendar lookups here, multi-calendar day view in
+ * calendarDay.ts) — kept in one place so the two never drift apart. */
+export function dayBounds(dateISO: string): { timeMin: string; timeMax: string } {
+  return {
+    timeMin: new Date(`${dateISO}T00:00:00`).toISOString(),
+    timeMax: new Date(`${dateISO}T23:59:59`).toISOString(),
+  }
+}
+
 /** Looks for today's calendar event whose title starts with "Main Task" (case-insensitive). Returns null if Google isn't connected, the request fails, or nothing matches — the morning modal falls back to manual entry in every one of those cases. */
 export async function findMainTaskEvent(dateISO: string): Promise<string | null> {
   const token = await getAccessToken()
   if (!token) return null
 
-  const timeMin = new Date(`${dateISO}T00:00:00`).toISOString()
-  const timeMax = new Date(`${dateISO}T23:59:59`).toISOString()
+  const { timeMin, timeMax } = dayBounds(dateISO)
   const params = new URLSearchParams({
     timeMin,
     timeMax,
