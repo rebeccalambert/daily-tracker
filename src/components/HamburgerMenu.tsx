@@ -4,9 +4,17 @@ interface HamburgerMenuProps {
   onSelectSettings: () => void
   onSelectPrayer: () => void
   onSelectCalendar: () => void
+  showPrayer: boolean
+  showCalendar: boolean
 }
 
-export default function HamburgerMenu({ onSelectSettings, onSelectPrayer, onSelectCalendar }: HamburgerMenuProps) {
+export default function HamburgerMenu({
+  onSelectSettings,
+  onSelectPrayer,
+  onSelectCalendar,
+  showPrayer,
+  showCalendar,
+}: HamburgerMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -39,24 +47,28 @@ export default function HamburgerMenu({ onSelectSettings, onSelectPrayer, onSele
       </button>
       {open && (
         <div className="menu-dropdown">
-          <button
-            className="menu-item"
-            onClick={() => {
-              setOpen(false)
-              onSelectPrayer()
-            }}
-          >
-            Prayer Requests
-          </button>
-          <button
-            className="menu-item"
-            onClick={() => {
-              setOpen(false)
-              onSelectCalendar()
-            }}
-          >
-            Calendar
-          </button>
+          {showPrayer && (
+            <button
+              className="menu-item"
+              onClick={() => {
+                setOpen(false)
+                onSelectPrayer()
+              }}
+            >
+              Prayer Requests
+            </button>
+          )}
+          {showCalendar && (
+            <button
+              className="menu-item"
+              onClick={() => {
+                setOpen(false)
+                onSelectCalendar()
+              }}
+            >
+              Calendar
+            </button>
+          )}
           <button
             className="menu-item"
             onClick={() => {

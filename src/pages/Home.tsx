@@ -7,15 +7,17 @@ import { isTodoRelevantOnHome } from '../lib/homeVisibility'
 import { todayISO } from '../lib/date'
 import { getTodayEvents, formatEventTime, type DayEvent } from '../lib/calendarDay'
 import { isGoogleConnected } from '../lib/googleAuth'
+import type { FeatureKey } from '../lib/featureVisibility'
 import type { DailyState, TodoItem } from '../types'
 
 interface HomeProps {
   daily: DailyState
   onPersist: (patch: Partial<DailyState>) => void
   onEndDay: () => void
+  visibility: Record<FeatureKey, boolean>
 }
 
-export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps) {
+export default function Home({ daily, onPersist: persist, onEndDay, visibility }: HomeProps) {
   const today = todayISO()
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [todosStatus, setTodosStatus] = useState<'loading' | 'ready' | 'not-connected' | 'error'>('loading')
@@ -28,10 +30,18 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
   // Reading + parsing localStorage on every render (Home re-renders on every checkbox toggle
   // and drag reorder) is wasted work — prayer requests only change via the Prayer tab, a
   // separate mount, so it's safe to compute this once per Home mount instead.
-  const prayers = useMemo(() => getAllPrayerRequests().filter(p => isPrayerRelevantToday(p, today)), [today])
+  const prayers = useMemo(
+    () => (visibility.prayer ? getAllPrayerRequests().filter(p => isPrayerRelevantToday(p, today)) : []),
+    [today, visibility.prayer]
+  )
   const homeTodos = useMemo(() => todos.filter(t => isTodoRelevantOnHome(t, today)), [todos, today])
 
   useEffect(() => {
+    if (!visibility.todos) {
+      setTodosStatus('not-connected')
+      setTodos([])
+      return
+    }
     if (!getHabiticaCredentials()) {
       setTodosStatus('not-connected')
       return
@@ -42,9 +52,14 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
         setTodosStatus('ready')
       })
       .catch(() => setTodosStatus('error'))
-  }, [])
+  }, [visibility.todos])
 
   useEffect(() => {
+    if (!visibility.calendar) {
+      setEventsStatus('not-connected')
+      setEvents([])
+      return
+    }
     if (!isGoogleConnected()) {
       setEventsStatus('not-connected')
       return
@@ -55,7 +70,7 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
         setEventsStatus('ready')
       })
       .catch(() => setEventsStatus('error'))
-  }, [today])
+  }, [today, visibility.calendar])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
@@ -99,56 +114,60 @@ export default function Home({ daily, onPersist: persist, onEndDay }: HomeProps)
         <p className="main-task-text">{daily.mainTaskText || 'Not set yet'}</p>
       </div>
 
-      {eventsStatus === 'not-connected' ? (
-        <p className="tab-caption">Connect Google in Settings to see today's calendar here.</p>
-      ) : eventsStatus === 'error' ? (
-        <p className="tab-caption">Couldn't load your calendar — check your connection in Settings.</p>
-      ) : eventsStatus === 'ready' ? (
-        <div className="calendar-widget">
-          {currentEvent && (
-            <div className="event-card">
-              <p className="eyebrow">Happening now</p>
-              <p className="event-title">{currentEvent.title}</p>
-              <p className="event-time">
-                {formatEventTime(currentEvent.start!)}–{formatEventTime(currentEvent.end!)}
+      {visibility.calendar &&
+        (eventsStatus === 'not-connected' ? (
+          <p className="tab-caption">Connect Google in Settings to see today's calendar here.</p>
+        ) : eventsStatus === 'error' ? (
+          <p className="tab-caption">Couldn't load your calendar — check your connection in Settings.</p>
+        ) : eventsStatus === 'ready' ? (
+          <div className="calendar-widget">
+            {currentEvent && (
+              <div className="event-card">
+                <p className="eyebrow">Happening now</p>
+                <p className="event-title">{currentEvent.title}</p>
+                <p className="event-time">
+                  {formatEventTime(currentEvent.start!)}–{formatEventTime(currentEvent.end!)}
+                </p>
+              </div>
+            )}
+            {nextEvent ? (
+              <p className="upcoming-line">
+                <span className="upcoming-label">{currentEvent ? 'Next' : 'Upcoming'}</span>
+                {nextEvent.title} · {formatEventTime(nextEvent.start!)}
               </p>
-            </div>
-          )}
-          {nextEvent ? (
-            <p className="upcoming-line">
-              <span className="upcoming-label">{currentEvent ? 'Next' : 'Upcoming'}</span>
-              {nextEvent.title} · {formatEventTime(nextEvent.start!)}
-            </p>
-          ) : (
-            !currentEvent && <p className="tab-caption">Nothing else on your calendar today.</p>
-          )}
-        </div>
-      ) : null}
+            ) : (
+              !currentEvent && <p className="tab-caption">Nothing else on your calendar today.</p>
+            )}
+          </div>
+        ) : null)}
 
-      <PrayerDropdown
-        prayers={prayers}
-        completedIds={daily.completedPrayerIds}
-        order={daily.homePrayerOrder}
-        open={daily.homePrayerOpen}
-        onToggleOpen={() => persist({ homePrayerOpen: !daily.homePrayerOpen })}
-        onToggle={togglePrayer}
-        onReorder={newOrder => persist({ homePrayerOrder: newOrder })}
-      />
-
-      {todosStatus === 'not-connected' ? (
-        <p className="tab-caption">Connect Habitica in Settings to see your to-dos here.</p>
-      ) : todosStatus === 'error' ? (
-        <p className="tab-caption">Couldn't load Habitica to-dos — check your connection in Settings.</p>
-      ) : (
-        <TodoDropdown
-          todos={homeTodos}
-          order={daily.homeTodoOrder}
-          open={daily.homeTodoOpen}
-          onToggleOpen={() => persist({ homeTodoOpen: !daily.homeTodoOpen })}
-          onToggle={toggleTodo}
-          onReorder={newOrder => persist({ homeTodoOrder: newOrder })}
+      {visibility.prayer && (
+        <PrayerDropdown
+          prayers={prayers}
+          completedIds={daily.completedPrayerIds}
+          order={daily.homePrayerOrder}
+          open={daily.homePrayerOpen}
+          onToggleOpen={() => persist({ homePrayerOpen: !daily.homePrayerOpen })}
+          onToggle={togglePrayer}
+          onReorder={newOrder => persist({ homePrayerOrder: newOrder })}
         />
       )}
+
+      {visibility.todos &&
+        (todosStatus === 'not-connected' ? (
+          <p className="tab-caption">Connect Habitica in Settings to see your to-dos here.</p>
+        ) : todosStatus === 'error' ? (
+          <p className="tab-caption">Couldn't load Habitica to-dos — check your connection in Settings.</p>
+        ) : (
+          <TodoDropdown
+            todos={homeTodos}
+            order={daily.homeTodoOrder}
+            open={daily.homeTodoOpen}
+            onToggleOpen={() => persist({ homeTodoOpen: !daily.homeTodoOpen })}
+            onToggle={toggleTodo}
+            onReorder={newOrder => persist({ homeTodoOrder: newOrder })}
+          />
+        ))}
 
       <button className="end-day-link" onClick={onEndDay}>
         End day →
