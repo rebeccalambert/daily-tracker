@@ -1,6 +1,8 @@
+import { getItem, setItem, removeItem, isDemoMode } from './storage'
+
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file'
-const TOKEN_KEY = 'daily-tracker:googleToken'
+const TOKEN_KEY = 'googleToken'
 
 interface StoredToken {
   accessToken: string
@@ -36,18 +38,12 @@ declare global {
 let tokenClient: TokenClient | null = null
 
 function getStoredToken(): StoredToken | null {
-  const raw = localStorage.getItem(TOKEN_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as StoredToken
-  } catch {
-    return null
-  }
+  return getItem<StoredToken | null>(TOKEN_KEY, null)
 }
 
 function setStoredToken(token: StoredToken | null) {
-  if (token) localStorage.setItem(TOKEN_KEY, JSON.stringify(token))
-  else localStorage.removeItem(TOKEN_KEY)
+  if (token) setItem(TOKEN_KEY, token)
+  else removeItem(TOKEN_KEY)
 }
 
 /** Whether Google has ever been connected — stays true even if the access token has expired (that just means a silent/interactive refresh is needed next use). */
@@ -106,6 +102,10 @@ export function disconnectGoogle(): void {
 
 /** Returns a usable access token, silently refreshing if the stored one expired. Returns null if never connected or refresh failed (caller should treat that as "not connected"). */
 export async function getAccessToken(): Promise<string | null> {
+  // Safety net: every real caller of this already short-circuits on demo mode itself (see
+  // calendarDay.ts, sheets.ts), but this guard means even a future call site that forgets to
+  // check first still can never reach requestToken/the GIS token client while demo mode is on.
+  if (isDemoMode()) return null
   const existing = getValidAccessToken()
   if (existing) return existing
   if (!isGoogleConnected()) return null

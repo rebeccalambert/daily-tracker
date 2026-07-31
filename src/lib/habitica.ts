@@ -1,7 +1,16 @@
-import { getItem } from './storage'
+import { getItem, setItem, isDemoMode } from './storage'
 import type { TodoItem } from '../types'
 
 const BASE_URL = 'https://habitica.com/api/v3'
+const DEMO_TODOS_KEY = 'demoTodos'
+
+export function getDemoTodos(): TodoItem[] {
+  return getItem<TodoItem[]>(DEMO_TODOS_KEY, [])
+}
+
+export function setDemoTodos(todos: TodoItem[]): void {
+  setItem(DEMO_TODOS_KEY, todos)
+}
 
 export interface HabiticaCredentials {
   userId: string
@@ -33,6 +42,10 @@ function authHeaders(creds: HabiticaCredentials): HeadersInit {
 }
 
 export async function getHabiticaTasks(): Promise<HabiticaRawTask[]> {
+  // Safety net: every real caller below already short-circuits on demo mode itself, so this
+  // should be unreachable in demo mode — but guard it directly too, since it's the function that
+  // actually calls fetch.
+  if (isDemoMode()) throw new Error('getHabiticaTasks must not be called in demo mode')
   const creds = getHabiticaCredentials()
   if (!creds) throw new Error('Habitica not connected')
   const res = await fetch(`${BASE_URL}/tasks/user`, { headers: authHeaders(creds) })
@@ -42,6 +55,7 @@ export async function getHabiticaTasks(): Promise<HabiticaRawTask[]> {
 }
 
 export async function scoreHabiticaTask(taskId: string, direction: 'up' | 'down') {
+  if (isDemoMode()) throw new Error('scoreHabiticaTask must not be called in demo mode')
   const creds = getHabiticaCredentials()
   if (!creds) throw new Error('Habitica not connected')
   const res = await fetch(`${BASE_URL}/tasks/${taskId}/score/${direction}`, {
@@ -66,6 +80,7 @@ function toTodoItem(raw: HabiticaRawTask): TodoItem {
 
 /** Dailies due today + all todos (undated ones included — the UI sorts undated todos into a Backlog view). Habits are intentionally excluded. */
 export async function getTodayTodos(): Promise<TodoItem[]> {
+  if (isDemoMode()) return getDemoTodos()
   const raw = await getHabiticaTasks()
   return raw
     .filter(t => t.type === 'daily' || t.type === 'todo')
@@ -74,14 +89,27 @@ export async function getTodayTodos(): Promise<TodoItem[]> {
 }
 
 export async function completeHabiticaTask(taskId: string): Promise<void> {
+  if (isDemoMode()) {
+    setDemoTodos(getDemoTodos().map(t => (t.id === taskId ? { ...t, completed: true } : t)))
+    return
+  }
   await scoreHabiticaTask(taskId, 'up')
 }
 
 export async function uncompleteHabiticaTask(taskId: string): Promise<void> {
+  if (isDemoMode()) {
+    setDemoTodos(getDemoTodos().map(t => (t.id === taskId ? { ...t, completed: false } : t)))
+    return
+  }
   await scoreHabiticaTask(taskId, 'down')
 }
 
 export async function createHabiticaTodo(text: string, dueDate?: string, notes?: string): Promise<TodoItem> {
+  if (isDemoMode()) {
+    const item: TodoItem = { id: `demo-todo-${Date.now()}`, text, type: 'todo', dueDate, notes, completed: false }
+    setDemoTodos([...getDemoTodos(), item])
+    return item
+  }
   const creds = getHabiticaCredentials()
   if (!creds) throw new Error('Habitica not connected')
   const res = await fetch(`${BASE_URL}/tasks/user`, {
@@ -98,6 +126,21 @@ export async function updateHabiticaTodo(
   taskId: string,
   updates: { text?: string; notes?: string; date?: string | null }
 ): Promise<TodoItem> {
+  if (isDemoMode()) {
+    const todos = getDemoTodos()
+    const idx = todos.findIndex(t => t.id === taskId)
+    if (idx === -1) throw new Error('Demo todo not found')
+    const updated: TodoItem = {
+      ...todos[idx],
+      text: updates.text ?? todos[idx].text,
+      notes: updates.notes ?? todos[idx].notes,
+      dueDate: updates.date === undefined ? todos[idx].dueDate : updates.date ?? undefined,
+    }
+    const next = [...todos]
+    next[idx] = updated
+    setDemoTodos(next)
+    return updated
+  }
   const creds = getHabiticaCredentials()
   if (!creds) throw new Error('Habitica not connected')
   const res = await fetch(`${BASE_URL}/tasks/${taskId}`, {

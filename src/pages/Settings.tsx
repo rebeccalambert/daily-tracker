@@ -1,15 +1,20 @@
 import { useState } from 'react'
-import { getItem, setItem } from '../lib/storage'
+import { getItem, setItem, isDemoMode } from '../lib/storage'
 import type { HabiticaCredentials } from '../lib/habitica'
 import { connectGoogle, disconnectGoogle, isGoogleConnected } from '../lib/googleAuth'
 import { getDailyLogSheetUrl } from '../lib/sheets'
 import { getFeatureVisibility, setFeatureVisibility, type FeatureKey } from '../lib/featureVisibility'
+import { enableDemoMode, disableDemoMode } from '../lib/demoMode'
 
 interface SettingsProps {
   /** Called after a save — lets the app re-run its "does today need a morning/evening prompt" check, since that only runs once on load otherwise. */
   onConnectionsChanged?: () => void
   /** Called after a feature toggle — lets the app re-read visibility so Home/menu/tabbar update immediately instead of only on next reload. */
   onVisibilityChanged?: () => void
+  /** Called after Demo Mode is toggled on or off — lets the app re-read everything (today's
+   * state, visibility, connections) from whichever storage namespace is now active, so Home/
+   * tabbar/menu all reflect the switch immediately with no reload needed. */
+  onDemoModeChanged?: () => void
 }
 
 const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -18,7 +23,7 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   calendar: 'Calendar',
 }
 
-export default function Settings({ onConnectionsChanged, onVisibilityChanged }: SettingsProps) {
+export default function Settings({ onConnectionsChanged, onVisibilityChanged, onDemoModeChanged }: SettingsProps) {
   const saved = getItem<HabiticaCredentials>('habiticaCredentials', { userId: '', apiToken: '' })
   const [userId, setUserId] = useState(saved.userId)
   const [apiToken, setApiToken] = useState(saved.apiToken)
@@ -30,11 +35,29 @@ export default function Settings({ onConnectionsChanged, onVisibilityChanged }: 
   const sheetUrl = getDailyLogSheetUrl()
 
   const [visibility, setVisibility] = useState(getFeatureVisibility())
+  const [demoMode, setDemoModeState] = useState(isDemoMode())
 
   function handleVisibilityToggle(key: FeatureKey, value: boolean) {
     setFeatureVisibility(key, value)
     setVisibility(getFeatureVisibility())
     onVisibilityChanged?.()
+  }
+
+  function handleDemoModeToggle() {
+    if (demoMode) {
+      disableDemoMode()
+    } else {
+      enableDemoMode()
+    }
+    // The storage namespace just switched — re-read everything this component itself caches in
+    // state, the same way it already would on a fresh mount.
+    const nextSaved = getItem<HabiticaCredentials>('habiticaCredentials', { userId: '', apiToken: '' })
+    setUserId(nextSaved.userId)
+    setApiToken(nextSaved.apiToken)
+    setGoogleConnected(isGoogleConnected())
+    setVisibility(getFeatureVisibility())
+    setDemoModeState(isDemoMode())
+    onDemoModeChanged?.()
   }
 
   function handleSave() {
@@ -66,6 +89,21 @@ export default function Settings({ onConnectionsChanged, onVisibilityChanged }: 
     <section className="settings">
       <p className="tab-title">Settings</p>
       <p className="tab-caption">Manage your connections.</p>
+
+      <div className={`settings-group demo-mode-group${demoMode ? ' demo-mode-on' : ''}`}>
+        <h3>Demo Mode</h3>
+        <div className="settings-status">
+          <span className={`status-dot${demoMode ? ' connected' : ''}`} />
+          <span>{demoMode ? 'On — showing sample data' : 'Off — showing your real data'}</span>
+        </div>
+        <p className="tab-caption">
+          Fills the app with realistic sample data to click through — completely isolated from your real Habitica,
+          Google, and prayer data. Safe to turn on even with real data already on this device.
+        </p>
+        <button className="primary-btn" onClick={handleDemoModeToggle}>
+          {demoMode ? 'Turn off Demo Mode' : 'Turn on Demo Mode'}
+        </button>
+      </div>
 
       <div className="settings-group">
         <h3>Habitica</h3>
