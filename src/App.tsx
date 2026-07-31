@@ -91,6 +91,20 @@ function App() {
     }
   }
 
+  function handleDemoModeChanged() {
+    // Demo Mode just flipped, which switched which storage namespace every getItem/setItem call
+    // reads from underneath us — re-read everything this component cached in state (the same
+    // things a fresh mount would read), and clear any in-flight modal state so nothing from the
+    // previous namespace lingers on screen.
+    setDaily(getDailyState(today))
+    setVisibility(getFeatureVisibility())
+    setShowMorning(false)
+    setShowEvening(false)
+    setCatchupDate(null)
+    setCatchupDaily(null)
+    setTab('home')
+  }
+
   function handleVisibilityChanged() {
     const next = getFeatureVisibility()
     setVisibility(next)
@@ -148,7 +162,11 @@ function App() {
         {tab === 'todos' && <TodosTab />}
         {tab === 'calendar' && <CalendarTab />}
         {tab === 'settings' && (
-          <Settings onConnectionsChanged={handleConnectionsChanged} onVisibilityChanged={handleVisibilityChanged} />
+          <Settings
+            onConnectionsChanged={handleConnectionsChanged}
+            onVisibilityChanged={handleVisibilityChanged}
+            onDemoModeChanged={handleDemoModeChanged}
+          />
         )}
       </main>
 

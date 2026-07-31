@@ -34,6 +34,21 @@
   color: inherit;
 }
 
+.demo-mode-group {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.demo-mode-group.demo-mode-on {
+  border-color: var(--accent);
+}
+
+.demo-mode-group .tab-caption {
+  margin-bottom: 0.75rem;
+}
+
 .feature-toggle {
   display: flex;
   align-items: center;

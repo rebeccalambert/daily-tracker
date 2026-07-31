@@ -1,5 +1,7 @@
 import { getAccessToken } from './googleAuth'
 import { dayBounds } from './calendar'
+import { isDemoMode } from './storage'
+import { buildDemoEvents } from './demoData'
 
 export interface DayEvent {
   id: string
@@ -115,6 +117,10 @@ function toDayEvent(e: GCalEvent, index: number): DayEvent {
  * calendarList failure, or a per-calendar events failure all resolve to an empty (or partial)
  * list rather than an error the caller has to guard against. */
 export async function getTodayEvents(dateISO: string): Promise<DayEvent[]> {
+  // Demo mode: two fixture events, times recomputed relative to "now" on every call (cheap —
+  // not network-like, so recomputing per call is fine) — never reach getAccessToken/fetch.
+  if (isDemoMode()) return buildDemoEvents()
+
   const token = await getAccessToken()
   if (!token) return []
 

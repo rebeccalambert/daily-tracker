@@ -1,5 +1,6 @@
 import { appendDailyLogRow } from './sheets'
 import { formatLogTimestamp } from './date'
+import { getItem, setItem, isDemoMode } from './storage'
 
 export interface DailyLogRow {
   /** ISO date (YYYY-MM-DD) of the day this row is *about* — today for a normal review, or the
@@ -16,13 +17,12 @@ export interface DailyLogRow {
   gratitude: string
 }
 
-const HISTORY_KEY = 'daily-tracker:dailyLogHistory'
+const HISTORY_KEY = 'dailyLogHistory'
 
 function saveLocalBackup(row: DailyLogRow): void {
-  const raw = localStorage.getItem(HISTORY_KEY)
-  const history: DailyLogRow[] = raw ? JSON.parse(raw) : []
+  const history = getItem<DailyLogRow[]>(HISTORY_KEY, [])
   history.push(row)
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  setItem(HISTORY_KEY, history)
 }
 
 /**
@@ -39,6 +39,9 @@ function saveLocalBackup(row: DailyLogRow): void {
 export async function saveDailyLog(row: DailyLogRow): Promise<{ sheetSaved: boolean }> {
   const stamped: DailyLogRow = { ...row, date: formatLogTimestamp(row.date) }
   saveLocalBackup(stamped)
+  // Demo mode: local backup above already gives "Save & log day" its persisted, closable
+  // success behavior — never reach appendDailyLogRow/getAccessToken/fetch.
+  if (isDemoMode()) return { sheetSaved: true }
   const sheetSaved = await appendDailyLogRow(stamped)
   return { sheetSaved }
 }
