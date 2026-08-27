@@ -34,6 +34,7 @@ The recurring problem: no single daily record of what got done, what didn't, and
 
 ## Architecture & decisions
 
+- **Monorepo, `frontend/` + `backend/`.** The backend rebuild (see `ITEM_MODEL_SPEC.md`) lives alongside the frontend in one repo rather than a second one, so the full system is visible from a single clone — no hunting for a companion repo to see how the pieces fit.
 - **Vite + React + TypeScript, not Next.js.** The app is 100% client-side — no SSR, no API routes, no server-held secrets — so a full-stack meta-framework buys nothing, and GitHub Pages (static-only hosting) couldn't run Next's server features regardless.
 - **PWA, offline-first.** Installable via "Add to Home Screen," with `vite-plugin-pwa` precaching the app shell so it works with no signal.
 - **No backend, no accounts.** Single-user tool. Local state lives in `localStorage`; the only "server" data lives in third-party APIs already in use (Habitica, Google) — adding either a database or an accounts system would have been pure overhead for a requirement that never needed them.
@@ -55,7 +56,10 @@ React 19, TypeScript (strict), Vite 8, `vite-plugin-pwa`. No CSS framework — h
 
 ## Getting started
 
+This is a monorepo: `frontend/` (this app) and `backend/` (in progress — see `ITEM_MODEL_SPEC.md`). All frontend commands below run from inside `frontend/`.
+
 ```bash
+cd frontend
 npm install
 cp .env.example .env   # fill in VITE_GOOGLE_CLIENT_ID — see below
 npm run dev             # start the dev server
