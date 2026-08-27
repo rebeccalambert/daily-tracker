@@ -47,6 +47,7 @@ React 19, TypeScript (strict), Vite 8, `vite-plugin-pwa`. No CSS framework — h
 
 ## Engineering notes (for anyone reading the code, not just the pitch)
 
+- **`ITEM_MODEL_SPEC.md`** is the data-model spec and bird's-eye build plan for the backend rebuild in progress — replacing Habitica with a self-designed REST API. Schema, recurrence rules, resolved edge cases, and the reasoning behind each call.
 - **`DECISIONS_LOG.md`** in this repo is a running record of real judgment calls, real bugs found while testing against a live account, and trade-offs made along the way — written as they happened, not reconstructed after the fact for this README.
 - **Feature-branch + PR workflow**, solo project or not — see the closed PRs in this repo's history. Habits worth keeping regardless of team size.
 - **Demo Mode is a real isolated namespace, not a hardcoded screenshot.** Flipping it on swaps every `localStorage` read/write to a separate key prefix, seeds it with fixture data shaped exactly like real Habitica/Sheets responses, and swaps back cleanly — built so a reviewer (or a future me) can exercise the actual app logic, not a mockup of it.
