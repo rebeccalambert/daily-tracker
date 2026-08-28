@@ -105,7 +105,7 @@ interface Item {
 
 ## REST surface
 
-Auth: a single shared API key, sent as `Authorization: Bearer <key>` — same pattern as the old Habitica token, checked against one server-side environment value. No accounts, no sessions; this is still a single-user tool.
+Auth: real login, no database involved. `PASSWORD_HASH` is a server-side env var (generated once via `npm run hash-password`) — `POST /login` checks a submitted password against it and issues a signed token; every other route requires `Authorization: Bearer <token>`, verified against that signature. No `User` table, no email, no signup endpoint: there's exactly one password gating exactly one dataset, so there's nothing to look up, only something to verify. (An earlier pass at this reached for a full `User` model out of habit — the conventional shape for "real login" — before noticing a table that will only ever hold one row isn't really an accounts system, it's a password with extra steps.) This replaced an even earlier plan for a single static shared API key, once real login turned out to matter for keeping personal data private, separate from the fully unauthenticated, frontend-only Demo Mode.
 
 | Method | Path | Description |
 |---|---|---|
@@ -126,11 +126,11 @@ Deliberately **not** in this rebuild: websockets or any real-time sync — phone
 - **No pileup, ever:** one row per recurring item regardless of how many cycles were missed — the entire point of dropping Habitica.
 - **Reset is lazy, not cron-driven:** computed on read by comparing `completedAt`'s cycle to the current cycle. No scheduler to maintain, no external reset process to fight.
 - **`once` items:** visible on the full list immediately; visible on Home only once due (or overdue); completion is permanent.
-- **Auth:** single shared API key over a full login/JWT system — this remains a single-user tool by design.
+- **Auth:** real login gating one password, not one account — `PASSWORD_HASH` env var (Node's built-in `crypto.scrypt`), no `User` table. Went through a detour where a `User` model got added out of habit before it was clear a single-row "accounts table" wasn't solving any real problem here.
 - **Sync:** refetch-based, no websockets — explicitly ruled out as unnecessary scope.
 - **Scope boundary:** only to-dos and prayer requests move to the new backend. Daily log (Sheets) and Calendar stay exactly as they are.
 - **Day-of-month clamping:** `effectiveDay = min(dayOfMonth, daysInThatMonth)`, recomputed every cycle — self-corrects back to the pinned day the next time a long-enough month comes around, rather than drifting or getting stuck.
 
 ---
 
-*Last updated 2026-08-27.*
+*Last updated 2026-08-28.*
