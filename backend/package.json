@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Express + TypeScript + Prisma API for Daily — replaces Habitica as the source of truth for To-Dos and Prayer Requests. See ../ITEM_MODEL_SPEC.md for the data model.",
+  "description": "Express + TypeScript + Prisma API for Daily, replaces Habitica as the source of truth for To-Dos and Prayer Requests. See ../ITEM_MODEL_SPEC.md for the data model.",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "postinstall": "prisma generate",
-    "hash-password": "tsx scripts/hash-password.ts"
+    "hash-password": "tsx scripts/hash-password.ts",
+    "smoke-test": "tsx scripts/smoke-test.ts"
   },
   "keywords": [],
   "author": "",
