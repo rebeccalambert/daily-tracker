@@ -1,14 +1,18 @@
 import { Router } from 'express'
 import { prisma } from '../prisma.js'
+import { applyCycleReset, chicagoToday, todayAsStoredDate } from '../lib/recurrence.js'
 
 export const itemsRouter = Router()
 
 const VALID_TYPES = ['todo', 'prayer']
 const VALID_RECURRENCES = ['once', 'daily', 'weekly', 'monthly', 'yearly']
 
-// Fields a client is allowed to set via PATCH. Deliberately raw/dumb for now —
-// no auto-managed side effects (e.g. stamping completedAt when completed flips
-// to true). That behavior belongs to the recurrence engine (Ticket 4), not here.
+// Fields a client is allowed to set via PATCH. Raw/dumb pass-through, with
+// one exception: completing an item (completed -> true) always gets its
+// completedAt server-stamped below, overriding whatever's in the body — the
+// recurrence engine's cycle-reset depends on completedAt being trustworthy.
+// completedAt otherwise stays independently PATCHable (e.g. manual data
+// fixes) when completed isn't being set to true in the same request.
 const PATCHABLE_FIELDS = [
   'type',
   'recurrence',
@@ -25,7 +29,7 @@ const PATCHABLE_FIELDS = [
 
 const DATE_FIELDS = new Set(['dueDate', 'completedAt'])
 
-// GET /items?type=todo|prayer — plain list, no reset logic yet (TODO: Ticket 4).
+// GET /items?type=todo|prayer — list, with the lazy cycle-reset applied.
 itemsRouter.get('/', async (req, res) => {
   const { type } = req.query
 
@@ -37,7 +41,13 @@ itemsRouter.get('/', async (req, res) => {
     where: type ? { type } : undefined,
     orderBy: { sortIndex: 'asc' },
   })
-  res.json(items)
+
+  // Full list, unfiltered — every item regardless of due date or cycle
+  // state (see ITEM_MODEL_SPEC.md "Home vs. the full list"). Only the
+  // completed flag gets recomputed per item; nothing is hidden or written
+  // back to the database.
+  const today = chicagoToday()
+  res.json(items.map((item) => applyCycleReset(item, today)))
 })
 
 // POST /items — create. Only the fields that make sense for every item are
@@ -84,6 +94,13 @@ itemsRouter.patch('/:id', async (req, res) => {
     if (key in body) {
       data[key] = DATE_FIELDS.has(key) && body[key] ? new Date(body[key]) : body[key]
     }
+  }
+
+  // Completing an item always stamps completedAt server-side (Chicago
+  // calendar date), regardless of what the client sent for it — this is
+  // the value the recurrence engine's cycle-reset keys off of.
+  if (data.completed === true) {
+    data.completedAt = todayAsStoredDate()
   }
 
   if (Object.keys(data).length === 0) {
