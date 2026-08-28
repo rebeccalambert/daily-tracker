@@ -1,0 +1,37 @@
+// Daily — Backend Rebuild: Item model
+// See ITEM_MODEL_SPEC.md at the repo root for the full field-by-field reasoning.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Item {
+  id          String   @id @default(uuid()) @db.Uuid
+
+  type        String   // 'todo' | 'prayer' — plain string, not an enum, so it's easy to extend later
+  recurrence  String   // 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+
+  text        String
+  notes       String?
+
+  completed   Boolean  @default(false)
+  completedAt DateTime? @db.Date // date last marked done — drives reset logic + "done today" display
+
+  dueDate     DateTime? @db.Date // 'once' only
+  weekday     String?            // 'weekly' only, e.g. "Monday"
+  dayOfMonth  Int?               // 'monthly' or 'yearly'
+  month       Int?               // 'yearly' only
+
+  sortIndex   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type, sortIndex])
+}
