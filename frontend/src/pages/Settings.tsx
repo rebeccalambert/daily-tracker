@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { getItem, setItem, isDemoMode } from '../lib/storage'
-import type { HabiticaCredentials } from '../lib/habitica'
+import { useState, type FormEvent } from 'react'
+import { isDemoMode } from '../lib/storage'
+import { loginToBackend, disconnectBackend, isBackendConnected } from '../lib/itemsApi'
 import { connectGoogle, disconnectGoogle, isGoogleConnected } from '../lib/googleAuth'
 import { getDailyLogSheetUrl } from '../lib/sheets'
 import { getFeatureVisibility, setFeatureVisibility, type FeatureKey } from '../lib/featureVisibility'
@@ -24,11 +24,9 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
 }
 
 export default function Settings({ onConnectionsChanged, onVisibilityChanged, onDemoModeChanged }: SettingsProps) {
-  const saved = getItem<HabiticaCredentials>('habiticaCredentials', { userId: '', apiToken: '' })
-  const [userId, setUserId] = useState(saved.userId)
-  const [apiToken, setApiToken] = useState(saved.apiToken)
-  const [savedMessage, setSavedMessage] = useState(false)
-  const habiticaConnected = !!(saved.userId && saved.apiToken)
+  const [backendConnected, setBackendConnected] = useState(isBackendConnected())
+  const [password, setPassword] = useState('')
+  const [backendStatus, setBackendStatus] = useState<'idle' | 'connecting' | 'error'>('idle')
 
   const [googleConnected, setGoogleConnected] = useState(isGoogleConnected())
   const [googleStatus, setGoogleStatus] = useState<'idle' | 'connecting' | 'error'>('idle')
@@ -51,20 +49,31 @@ export default function Settings({ onConnectionsChanged, onVisibilityChanged, on
     }
     // The storage namespace just switched — re-read everything this component itself caches in
     // state, the same way it already would on a fresh mount.
-    const nextSaved = getItem<HabiticaCredentials>('habiticaCredentials', { userId: '', apiToken: '' })
-    setUserId(nextSaved.userId)
-    setApiToken(nextSaved.apiToken)
+    setBackendConnected(isBackendConnected())
     setGoogleConnected(isGoogleConnected())
     setVisibility(getFeatureVisibility())
     setDemoModeState(isDemoMode())
     onDemoModeChanged?.()
   }
 
-  function handleSave() {
-    setItem('habiticaCredentials', { userId, apiToken })
-    setSavedMessage(true)
-    setTimeout(() => setSavedMessage(false), 1500)
-    onConnectionsChanged?.()
+  async function handleBackendConnect(e: FormEvent) {
+    e.preventDefault()
+    setBackendStatus('connecting')
+    const ok = await loginToBackend(password)
+    if (ok) {
+      setBackendConnected(true)
+      setBackendStatus('idle')
+      setPassword('')
+      onConnectionsChanged?.()
+    } else {
+      setBackendStatus('error')
+    }
+  }
+
+  function handleBackendDisconnect() {
+    disconnectBackend()
+    setBackendConnected(false)
+    setBackendStatus('idle')
   }
 
   async function handleGoogleConnect() {
@@ -97,8 +106,8 @@ export default function Settings({ onConnectionsChanged, onVisibilityChanged, on
           <span>{demoMode ? 'On — showing sample data' : 'Off — showing your real data'}</span>
         </div>
         <p className="tab-caption">
-          Fills the app with realistic sample data to click through — completely isolated from your real Habitica,
-          Google, and prayer data. Safe to turn on even with real data already on this device.
+          Fills the app with realistic sample data to click through — completely isolated from your real data.
+          Safe to turn on even with real data already on this device.
         </p>
         <button className="primary-btn" onClick={handleDemoModeToggle}>
           {demoMode ? 'Turn off Demo Mode' : 'Turn on Demo Mode'}
@@ -106,25 +115,25 @@ export default function Settings({ onConnectionsChanged, onVisibilityChanged, on
       </div>
 
       <div className="settings-group">
-        <h3>Habitica</h3>
+        <h3>Daily API</h3>
         <div className="settings-status">
-          <span className={`status-dot${habiticaConnected ? ' connected' : ''}`} />
-          <span>{habiticaConnected ? 'Connected' : 'Not connected'}</span>
+          <span className={`status-dot${backendConnected ? ' connected' : ''}`} />
+          <span>{backendConnected ? 'Connected' : 'Not connected'}</span>
         </div>
-        <label>
-          User ID
-          <input
-            value={userId}
-            onChange={e => setUserId(e.target.value)}
-            placeholder="from habitica.com/user/settings/api"
-          />
-        </label>
-        <label>
-          API Token
-          <input type="password" value={apiToken} onChange={e => setApiToken(e.target.value)} />
-        </label>
-        <button onClick={handleSave}>Save</button>
-        {savedMessage && <span className="saved-hint">Saved</span>}
+        {backendConnected ? (
+          <button onClick={handleBackendDisconnect}>Disconnect</button>
+        ) : (
+          <form onSubmit={handleBackendConnect}>
+            <label>
+              Password
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+            </label>
+            <button type="submit" disabled={backendStatus === 'connecting' || !password}>
+              {backendStatus === 'connecting' ? 'Connecting…' : 'Connect'}
+            </button>
+          </form>
+        )}
+        {backendStatus === 'error' && <p className="tab-caption">Wrong password, or the server didn't respond. Try again.</p>}
       </div>
 
       <div className="settings-group">
