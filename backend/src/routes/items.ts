@@ -1,11 +1,16 @@
 import { Router } from 'express'
 import { prisma } from '../prisma.js'
 import { applyCycleReset, chicagoToday, todayAsStoredDate } from '../lib/recurrence.js'
+import { ITEM_TYPES, RECURRENCES } from '@daily-tracker/shared'
 
 export const itemsRouter = Router()
 
-const VALID_TYPES = ['todo', 'prayer']
-const VALID_RECURRENCES = ['once', 'daily', 'weekly', 'monthly', 'yearly']
+// Array.includes() requires its argument to already be T, so checking an
+// arbitrary request value against a readonly T[] needs its own predicate —
+// this also narrows the checked value to T afterward, unlike a plain cast.
+function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
+  return typeof value === 'string' && (values as readonly string[]).includes(value)
+}
 
 // Fields a client is allowed to set via PATCH. Raw/dumb pass-through, with
 // one exception: completing an item (completed -> true) always gets its
@@ -33,8 +38,8 @@ const DATE_FIELDS = new Set(['dueDate', 'completedAt'])
 itemsRouter.get('/', async (req, res) => {
   const { type } = req.query
 
-  if (type !== undefined && (typeof type !== 'string' || !VALID_TYPES.includes(type))) {
-    return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` })
+  if (type !== undefined && !isOneOf(ITEM_TYPES, type)) {
+    return res.status(400).json({ error: `type must be one of: ${ITEM_TYPES.join(', ')}` })
   }
 
   const items = await prisma.item.findMany({
@@ -57,11 +62,11 @@ itemsRouter.post('/', async (req, res) => {
   const body = req.body ?? {}
   const { type, recurrence, text, notes, dueDate, weekday, dayOfMonth, month, sortIndex } = body
 
-  if (!VALID_TYPES.includes(type)) {
-    return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` })
+  if (!isOneOf(ITEM_TYPES, type)) {
+    return res.status(400).json({ error: `type must be one of: ${ITEM_TYPES.join(', ')}` })
   }
-  if (!VALID_RECURRENCES.includes(recurrence)) {
-    return res.status(400).json({ error: `recurrence must be one of: ${VALID_RECURRENCES.join(', ')}` })
+  if (!isOneOf(RECURRENCES, recurrence)) {
+    return res.status(400).json({ error: `recurrence must be one of: ${RECURRENCES.join(', ')}` })
   }
   if (typeof text !== 'string' || text.trim() === '') {
     return res.status(400).json({ error: 'text is required' })
@@ -106,11 +111,11 @@ itemsRouter.patch('/:id', async (req, res) => {
   if (Object.keys(data).length === 0) {
     return res.status(400).json({ error: 'No updatable fields provided' })
   }
-  if ('type' in data && !VALID_TYPES.includes(data.type as string)) {
-    return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` })
+  if ('type' in data && !isOneOf(ITEM_TYPES, data.type)) {
+    return res.status(400).json({ error: `type must be one of: ${ITEM_TYPES.join(', ')}` })
   }
-  if ('recurrence' in data && !VALID_RECURRENCES.includes(data.recurrence as string)) {
-    return res.status(400).json({ error: `recurrence must be one of: ${VALID_RECURRENCES.join(', ')}` })
+  if ('recurrence' in data && !isOneOf(RECURRENCES, data.recurrence)) {
+    return res.status(400).json({ error: `recurrence must be one of: ${RECURRENCES.join(', ')}` })
   }
 
   try {

@@ -37,3 +37,5 @@ export type ItemPatch = Partial<
 export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 
 export const RECURRENCES: Recurrence[] = ['once', 'daily', 'weekly', 'monthly', 'yearly']
+
+export const ITEM_TYPES: ItemType[] = ['todo', 'prayer'] // 'prayer' retiring — see Ticket 6
