@@ -1,28 +1,93 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
-import {
-  getTodayTodos,
-  createHabiticaTodo,
-  updateHabiticaTodo,
-  completeHabiticaTask,
-  uncompleteHabiticaTask,
-  getHabiticaCredentials,
-} from '../lib/habitica'
-import { effectiveSortDate, formatDue, todayISO } from '../lib/date'
-import type { TodoItem } from '../types'
+import { getItems, createItem, updateItem, isBackendConnected } from '../lib/itemsApi'
+import { todayISO, formatShortDate } from '../lib/date'
+import { WEEKDAYS, type Item, type Recurrence } from '@daily-tracker/shared'
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function ordinal(n: number): string {
+  const suffixes = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`
+}
+
+/** Human label for an item's cadence — everything but 'once', which is shown via its due date instead. */
+function describeCadence(item: Item): string {
+  switch (item.recurrence) {
+    case 'daily':
+      return 'Daily'
+    case 'weekly':
+      return `Weekly · ${item.weekday}`
+    case 'monthly':
+      return `Monthly · ${ordinal(item.dayOfMonth ?? 1)}`
+    case 'yearly':
+      return `Yearly · ${MONTHS[(item.month ?? 1) - 1]} ${ordinal(item.dayOfMonth ?? 1)}`
+    default:
+      return ''
+  }
+}
+
+interface DueInfo {
+  text: string
+  overdue: boolean
+}
+
+function formatOnceDue(dueDate: string | null, today: string): DueInfo {
+  if (!dueDate) return { text: '', overdue: false }
+  if (dueDate === today) return { text: 'Due today', overdue: false }
+  if (dueDate < today) return { text: `Overdue · ${formatShortDate(dueDate)}`, overdue: true }
+  return { text: `Due ${formatShortDate(dueDate)}`, overdue: false }
+}
 
 interface FormState {
-  name: string
-  date: string
-  note: string
+  text: string
+  recurrence: Recurrence
+  dueDate: string
+  weekday: string
+  dayOfMonth: string
+  month: string
+  notes: string
 }
 
 function emptyForm(): FormState {
-  return { name: '', date: '', note: '' }
+  return { text: '', recurrence: 'once', dueDate: '', weekday: 'Monday', dayOfMonth: '1', month: '1', notes: '' }
+}
+
+function formToItem(form: FormState) {
+  const text = form.text.trim()
+  const notes = form.notes.trim() || undefined
+  switch (form.recurrence) {
+    case 'once':
+      return { text, notes, dueDate: form.dueDate || undefined }
+    case 'daily':
+      return { text, notes }
+    case 'weekly':
+      return { text, notes, weekday: form.weekday }
+    case 'monthly':
+      return { text, notes, dayOfMonth: Number(form.dayOfMonth) }
+    case 'yearly':
+      return { text, notes, month: Number(form.month), dayOfMonth: Number(form.dayOfMonth) }
+  }
+}
+
+function itemToForm(item: Item): FormState {
+  return {
+    text: item.text,
+    recurrence: item.recurrence,
+    dueDate: item.dueDate ?? '',
+    weekday: item.weekday ?? 'Monday',
+    dayOfMonth: String(item.dayOfMonth ?? 1),
+    month: String(item.month ?? 1),
+    notes: item.notes ?? '',
+  }
 }
 
 export default function TodosTab() {
   const today = todayISO()
-  const [todos, setTodos] = useState<TodoItem[]>([])
+  const [items, setItems] = useState<Item[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'not-connected' | 'error'>('loading')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,13 +95,13 @@ export default function TodosTab() {
   const [backlogOpen, setBacklogOpen] = useState(false)
 
   function refresh() {
-    if (!getHabiticaCredentials()) {
+    if (!isBackendConnected()) {
       setStatus('not-connected')
       return
     }
-    getTodayTodos()
+    getItems('todo')
       .then(result => {
-        setTodos(result)
+        setItems(result)
         setStatus('ready')
       })
       .catch(() => setStatus('error'))
@@ -50,25 +115,21 @@ export default function TodosTab() {
     setShowForm(true)
   }
 
-  function openEdit(item: TodoItem, e: MouseEvent) {
+  function openEdit(item: Item, e: MouseEvent) {
     e.preventDefault()
-    if (item.type !== 'todo') return
     setEditingId(item.id)
-    setForm({ name: item.text, date: item.dueDate || '', note: item.notes || '' })
+    setForm(itemToForm(item))
     setShowForm(true)
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const name = form.name.trim()
-    if (!name) return
-    const dueDate = form.date || undefined
-    const notes = form.note.trim() || undefined
+    if (!form.text.trim()) return
     try {
       if (editingId) {
-        await updateHabiticaTodo(editingId, { text: name, date: dueDate ?? null, notes })
+        await updateItem(editingId, formToItem(form))
       } else {
-        await createHabiticaTodo(name, dueDate, notes)
+        await createItem({ type: 'todo', recurrence: form.recurrence, ...formToItem(form) })
       }
       refresh()
     } catch {
@@ -79,36 +140,40 @@ export default function TodosTab() {
     setForm(emptyForm())
   }
 
-  async function toggleDone(item: TodoItem) {
-    setTodos(prev => prev.map(t => (t.id === item.id ? { ...t, completed: !t.completed } : t)))
+  async function toggleDone(item: Item) {
+    setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: !i.completed } : i)))
     try {
-      if (item.completed) {
-        await uncompleteHabiticaTask(item.id)
-      } else {
-        await completeHabiticaTask(item.id)
-      }
+      await updateItem(item.id, { completed: !item.completed })
     } catch {
-      setTodos(prev => prev.map(t => (t.id === item.id ? { ...t, completed: item.completed } : t)))
+      setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: item.completed } : i)))
     }
   }
 
-  // Memoized (and computed before the early returns below, so hook order stays consistent
-  // across renders) so typing in the add/edit form doesn't re-filter/re-sort every keystroke.
-  const backlog = useMemo(() => todos.filter(t => t.type === 'todo' && !t.dueDate), [todos])
-  const sorted = useMemo(
+  // Memoized (and computed before the early returns below, so hook order stays consistent across
+  // renders) so typing in the add/edit form doesn't re-filter/re-sort every keystroke.
+  const backlog = useMemo(() => items.filter(i => i.recurrence === 'once' && !i.dueDate), [items])
+  const dated = useMemo(
     () =>
-      todos
-        .filter(t => t.type === 'daily' || !!t.dueDate)
+      items
+        .filter(i => i.recurrence === 'once' && !!i.dueDate)
         .slice()
-        .sort((a, b) => (effectiveSortDate(a, today) || '').localeCompare(effectiveSortDate(b, today) || '')),
-    [todos, today]
+        .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')),
+    [items]
   )
+  const byRecurrence = useMemo(() => {
+    const group = (r: Recurrence) =>
+      items
+        .filter(i => i.recurrence === r)
+        .slice()
+        .sort((a, b) => a.text.localeCompare(b.text))
+    return { daily: group('daily'), weekly: group('weekly'), monthly: group('monthly'), yearly: group('yearly') }
+  }, [items])
 
   if (status === 'not-connected') {
     return (
       <section className="tab-panel">
         <p className="tab-title">To-Dos</p>
-        <p className="tab-caption">Connect Habitica in Settings to see your to-dos here.</p>
+        <p className="tab-caption">Connect the Daily API in Settings to see your to-dos here.</p>
       </section>
     )
   }
@@ -117,15 +182,28 @@ export default function TodosTab() {
     return (
       <section className="tab-panel">
         <p className="tab-title">To-Dos</p>
-        <p className="tab-caption">Couldn't load Habitica to-dos — check your connection in Settings.</p>
+        <p className="tab-caption">Couldn't load to-dos — check your connection in Settings.</p>
       </section>
+    )
+  }
+
+  function renderItem(item: Item, dueOverride?: DueInfo) {
+    const due = dueOverride ?? { text: describeCadence(item), overdue: false }
+    return (
+      <li key={item.id} className={`todo-item${item.completed ? ' done' : ''}`}>
+        <input type="checkbox" id={`ts-${item.id}`} checked={item.completed} onChange={() => toggleDone(item)} />
+        <label htmlFor={`ts-${item.id}`} className="editable-label" onClick={e => openEdit(item, e)}>
+          {item.text} <span className={`due${due.overdue ? ' overdue' : ''}`}>{due.text}</span>
+          {item.notes && <span className="note">{item.notes}</span>}
+        </label>
+      </li>
     )
   }
 
   return (
     <section className="tab-panel">
       <p className="tab-title">To-Dos</p>
-      <p className="tab-caption">Synced from Habitica — dailies and tasks due today. Habits excluded for now.</p>
+      <p className="tab-caption">Once, daily, weekly, monthly, or yearly — pick whatever fits.</p>
       <button className="add-btn" onClick={openNew}>
         + Add to-do
       </button>
@@ -135,21 +213,90 @@ export default function TodosTab() {
           <label className="field-label">
             Name
             <input
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              value={form.text}
+              onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
               placeholder="e.g. Follow up with recruiter"
             />
           </label>
+
           <label className="field-label">
-            Due date (optional)
-            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+            Repeats
+            <select
+              value={form.recurrence}
+              onChange={e => setForm(f => ({ ...f, recurrence: e.target.value as Recurrence }))}
+            >
+              <option value="once">Once</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
           </label>
+
+          {form.recurrence === 'once' && (
+            <label className="field-label">
+              Due date (optional)
+              <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+            </label>
+          )}
+
+          {form.recurrence === 'weekly' && (
+            <label className="field-label">
+              Which day
+              <select value={form.weekday} onChange={e => setForm(f => ({ ...f, weekday: e.target.value }))}>
+                {WEEKDAYS.map(w => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {form.recurrence === 'monthly' && (
+            <label className="field-label">
+              Day of month
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={form.dayOfMonth}
+                onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))}
+              />
+            </label>
+          )}
+
+          {form.recurrence === 'yearly' && (
+            <>
+              <label className="field-label">
+                Month
+                <select value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))}>
+                  {MONTHS.map((m, idx) => (
+                    <option key={m} value={idx + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                Day
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={form.dayOfMonth}
+                  onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))}
+                />
+              </label>
+            </>
+          )}
+
           <label className="field-label">
             Notes (optional)
             <textarea
               rows={2}
-              value={form.note}
-              onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               placeholder="Any extra detail for this task"
             />
           </label>
@@ -166,45 +313,46 @@ export default function TodosTab() {
           </button>
           {backlogOpen && (
             <div className="section-body">
-              <ul className="todo-list">
-                {backlog.map(item => (
-                  <li key={item.id} className={`todo-item${item.completed ? ' done' : ''}`}>
-                    <input
-                      type="checkbox"
-                      id={`bl-${item.id}`}
-                      checked={item.completed}
-                      onChange={() => toggleDone(item)}
-                    />
-                    <label htmlFor={`bl-${item.id}`} className="editable-label" onClick={e => openEdit(item, e)}>
-                      {item.text}
-                    </label>
-                  </li>
-                ))}
-              </ul>
+              <ul className="todo-list">{backlog.map(item => renderItem(item, { text: '', overdue: false }))}</ul>
             </div>
           )}
         </div>
       )}
 
-      <p className="group-label">By due date</p>
-      <ul className="todo-list">
-        {sorted.map(item => {
-          const due = item.type === 'todo' ? formatDue(item.dueDate, today) : { text: 'Daily', overdue: false }
-          return (
-            <li key={item.id} className={`todo-item${item.completed ? ' done' : ''}`}>
-              <input type="checkbox" id={`ts-${item.id}`} checked={item.completed} onChange={() => toggleDone(item)} />
-              <label
-                htmlFor={`ts-${item.id}`}
-                className={item.type === 'todo' ? 'editable-label' : undefined}
-                onClick={item.type === 'todo' ? e => openEdit(item, e) : undefined}
-              >
-                {item.text} <span className={`due${due.overdue ? ' overdue' : ''}`}>{due.text}</span>
-                {item.notes && <span className="note">{item.notes}</span>}
-              </label>
-            </li>
-          )
-        })}
-      </ul>
+      {dated.length > 0 && (
+        <>
+          <p className="group-label">Due dates</p>
+          <ul className="todo-list">{dated.map(item => renderItem(item, formatOnceDue(item.dueDate, today)))}</ul>
+        </>
+      )}
+
+      {byRecurrence.daily.length > 0 && (
+        <>
+          <p className="group-label">Daily</p>
+          <ul className="todo-list">{byRecurrence.daily.map(item => renderItem(item))}</ul>
+        </>
+      )}
+
+      {byRecurrence.weekly.length > 0 && (
+        <>
+          <p className="group-label">Weekly</p>
+          <ul className="todo-list">{byRecurrence.weekly.map(item => renderItem(item))}</ul>
+        </>
+      )}
+
+      {byRecurrence.monthly.length > 0 && (
+        <>
+          <p className="group-label">Monthly</p>
+          <ul className="todo-list">{byRecurrence.monthly.map(item => renderItem(item))}</ul>
+        </>
+      )}
+
+      {byRecurrence.yearly.length > 0 && (
+        <>
+          <p className="group-label">Yearly</p>
+          <ul className="todo-list">{byRecurrence.yearly.map(item => renderItem(item))}</ul>
+        </>
+      )}
     </section>
   )
 }

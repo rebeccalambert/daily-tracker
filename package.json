@@ -1,0 +1,9 @@
+{
+  "name": "daily-tracker-workspace",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ]
+}

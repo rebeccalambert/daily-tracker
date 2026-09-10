@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@daily-tracker/shared": "*",
     "@prisma/client": "^6.12.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

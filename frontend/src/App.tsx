@@ -7,7 +7,7 @@ import Settings from './pages/Settings'
 import HamburgerMenu from './components/HamburgerMenu'
 import MorningModal from './components/MorningModal'
 import EveningReviewModal from './components/EveningReviewModal'
-import { getHabiticaCredentials } from './lib/habitica'
+import { isBackendConnected } from './lib/itemsApi'
 import { getDailyState, updateDailyState, getLastLoggedDate } from './lib/dailyState'
 import { getFeatureVisibility } from './lib/featureVisibility'
 import { todayISO, addDays } from './lib/date'
@@ -56,9 +56,9 @@ function App() {
   }
 
   useEffect(() => {
-    // Connection guard: without Habitica connected there's nothing meaningful to show on Home yet.
-    // (A Google connectedness check belongs here too, once real OAuth exists — see Settings.)
-    if (!getHabiticaCredentials()) {
+    // Connection guard: without the backend connected there's nothing meaningful to show on Home
+    // yet. (A Google connectedness check belongs here too, once real OAuth exists — see Settings.)
+    if (!isBackendConnected()) {
       setTab('settings')
       return
     }
@@ -83,9 +83,9 @@ function App() {
   }, [])
 
   function handleConnectionsChanged() {
-    // Habitica connecting mid-session (see Settings) means the guard above already ran and
+    // The backend connecting mid-session (see Settings) means the guard above already ran and
     // gave up — re-check now instead of making the user reload the page.
-    if (getHabiticaCredentials()) {
+    if (isBackendConnected()) {
       setTab('home')
       checkDailyPrompts()
     }

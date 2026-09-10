@@ -155,9 +155,9 @@ export default function Home({ daily, onPersist: persist, onEndDay, visibility }
 
       {visibility.todos &&
         (todosStatus === 'not-connected' ? (
-          <p className="tab-caption">Connect Habitica in Settings to see your to-dos here.</p>
+          <p className="tab-caption">To-dos on Home are being rewired for the new backend — check the To-Dos tab for now.</p>
         ) : todosStatus === 'error' ? (
-          <p className="tab-caption">Couldn't load Habitica to-dos — check your connection in Settings.</p>
+          <p className="tab-caption">Couldn't load to-dos — check your connection in Settings.</p>
         ) : (
           <TodoDropdown
             todos={homeTodos}

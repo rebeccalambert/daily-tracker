@@ -26,6 +26,7 @@ export function enableDemoMode(): void {
   const demoCredentials: HabiticaCredentials = { userId: 'demo', apiToken: 'demo' }
   setItem('habiticaCredentials', demoCredentials)
   setItem('googleToken', { accessToken: 'demo-google-token', expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000 })
+  setItem('backendAuthToken', 'demo-backend-token') // itemsApi.ts never sends real requests in demo mode — see its own isDemoMode() branches — this only exists so isBackendConnected() reads true
   ALL_FEATURES.forEach(key => setFeatureVisibility(key, true))
 }
 
