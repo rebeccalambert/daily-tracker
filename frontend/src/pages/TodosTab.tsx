@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { getItems, createItem, updateItem, isBackendConnected } from '../lib/itemsApi'
 import { todayISO, formatShortDate } from '../lib/date'
-import { WEEKDAYS, type Item, type Recurrence } from '@daily-tracker/shared'
+import { RECURRENCES, WEEKDAYS, type Item, type Recurrence } from '@daily-tracker/shared'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
+
+const RECURRENCE_LABELS: Record<Recurrence, string> = {
+  once: 'Once',
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  yearly: 'Yearly',
+}
 
 function ordinal(n: number): string {
   const suffixes = ['th', 'st', 'nd', 'rd']
@@ -225,11 +233,11 @@ export default function TodosTab() {
               value={form.recurrence}
               onChange={e => setForm(f => ({ ...f, recurrence: e.target.value as Recurrence }))}
             >
-              <option value="once">Once</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
+              {RECURRENCES.map(r => (
+                <option key={r} value={r}>
+                  {RECURRENCE_LABELS[r]}
+                </option>
+              ))}
             </select>
           </label>
 
