@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import Home from './pages/Home'
 import TodosTab from './pages/TodosTab'
-import CalendarTab from './pages/CalendarTab'
 import Settings from './pages/Settings'
 import HamburgerMenu from './components/HamburgerMenu'
 import MorningModal from './components/MorningModal'
@@ -11,7 +10,7 @@ import { todayISO } from './lib/date'
 import type { DailyState } from './types'
 import './App.css'
 
-type Tab = 'home' | 'todos' | 'settings' | 'calendar'
+type Tab = 'home' | 'todos' | 'settings'
 
 function formattedToday(): string {
   return new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
@@ -72,16 +71,12 @@ function App() {
     <div className="app">
       <header className="topbar">
         <span className="date">{formattedToday()}</span>
-        <HamburgerMenu
-          onSelectSettings={() => setTab('settings')}
-          onSelectCalendar={() => setTab('calendar')}
-        />
+        <HamburgerMenu onSelectSettings={() => setTab('settings')} />
       </header>
 
       <main className="content">
         {tab === 'home' && <Home daily={daily} />}
         {tab === 'todos' && <TodosTab />}
-        {tab === 'calendar' && <CalendarTab />}
         {tab === 'settings' && (
           <Settings
             onConnectionsChanged={handleConnectionsChanged}

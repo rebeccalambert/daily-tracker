@@ -2,13 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 
 interface HamburgerMenuProps {
   onSelectSettings: () => void
-  onSelectCalendar: () => void
 }
 
-export default function HamburgerMenu({
-  onSelectSettings,
-  onSelectCalendar,
-}: HamburgerMenuProps) {
+export default function HamburgerMenu({ onSelectSettings }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -41,16 +37,6 @@ export default function HamburgerMenu({
       </button>
       {open && (
         <div className="menu-dropdown">
-          <button
-            className="menu-item"
-            onClick={() => {
-              setOpen(false)
-              onSelectCalendar()
-            }}
-          >
-            Calendar
-          </button>
-  
           <button
             className="menu-item"
             onClick={() => {
