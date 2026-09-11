@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'Daily Tracker',
         short_name: 'Daily',
-        description: 'Personal daily tracker — main task, prayer requests, and Habitica to-dos',
+        description: 'Personal daily tracker — main task, and to-dos',
         theme_color: '#3b6e64',
         background_color: '#eef0ec',
         display: 'standalone',

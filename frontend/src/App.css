@@ -34,21 +34,6 @@
   color: inherit;
 }
 
-.demo-mode-group {
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-2);
-}
-
-.demo-mode-group.demo-mode-on {
-  border-color: var(--accent);
-}
-
-.demo-mode-group .tab-caption {
-  margin-bottom: 0.75rem;
-}
-
 .feature-toggle {
   display: flex;
   align-items: center;
@@ -285,7 +270,6 @@ button:disabled {
   padding-bottom: 14px;
 }
 
-.prayer-list,
 .todo-list {
   list-style: none;
   margin: 0;
@@ -295,7 +279,6 @@ button:disabled {
   gap: 12px;
 }
 
-.prayer-item,
 .todo-item {
   display: flex;
   align-items: flex-start;
@@ -311,19 +294,12 @@ button:disabled {
   flex-shrink: 0;
 }
 
-.prayer-item input[type="checkbox"],
 .todo-item input[type="checkbox"] {
   margin-top: 3px;
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
   flex-shrink: 0;
-}
-
-.prayer-item label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .todo-item label {
@@ -360,9 +336,6 @@ button:disabled {
   font-weight: 600;
 }
 
-.prayer-item.done .name,
-.prayer-item.done .tag,
-.prayer-item.done .note,
 .todo-item.done label {
   color: var(--faint);
   text-decoration: line-through;

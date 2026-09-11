@@ -1,12 +1,12 @@
 # Item Model Spec
 
-Companion to `README.md`: the data model for the backend rebuild that replaces Habitica as the source of truth for To-Dos and Prayer Requests. Worked out field by field, with the reasoning kept alongside each call, before any backend code was written. Also doubles as the bird's-eye build plan this project is being worked against.
+Companion to `README.md`: the data model for the backend rebuild that replaces Habitica as the source of truth for To-Dos. Worked out field by field, with the reasoning kept alongside each call, before any backend code was written. Also doubles as the bird's-eye build plan this project is being worked against.
 
 **Status:** core model locked. Build in progress; see the project board for current phase.
 
 ## Why one shared model
 
-To-dos and prayer requests turn out to be the same shape wearing a different label: something that either happens once by a date, or recurs on a schedule, and needs to be marked done and eventually un-done again. Rather than two parallel systems, there's one `Item` resource, discriminated by `type`. Both `type` and `recurrence` are plain strings rather than database enums on purpose. Postgres enums are painful to extend later (real migration restrictions), and `type` is explicitly meant to grow past `todo`/`prayer` someday.
+To-dos turn out to be the same shape wearing a different label: something that either happens once by a date, or recurs on a schedule, and needs to be marked done and eventually un-done again. Rather than two parallel systems, there's one `Item` resource, discriminated by `type`. Both `type` and `recurrence` are plain strings rather than database enums on purpose. Postgres enums are painful to extend later (real migration restrictions), and `type` is explicitly meant to grow past `todo`/`prayer` someday.
 
 ## Schema
 
@@ -101,7 +101,7 @@ interface Item {
 }
 ```
 
-**Note on `sortIndex`:** this used to live in `DailyState.homeTodoOrder`/`homePrayerOrder`, a fresh array recreated *per day*. Items are no longer recreated daily (a weekly item is the same row across weeks), so ordering moves onto the item itself. Scoped implicitly per `type`, since to-dos and prayer requests are never displayed in one merged list.
+**Note on `sortIndex`:** this used to live in `DailyState.homeTodoOrder`, a fresh array recreated *per day*. Items are no longer recreated daily (a weekly item is the same row across weeks), so ordering moves onto the item itself. Scoped implicitly per `type`, since to-dos and prayer requests are never displayed in one merged list.
 
 ## REST surface
 

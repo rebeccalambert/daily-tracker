@@ -23,4 +23,4 @@ Being built on `feature/backend-rebuild`, off of which this repo split into `fro
    ```
 4. From then on, `npm run dev:offline` runs the real server against the local DB — no internet required. `npm run test` and `npm run build` never touched the database in the first place and already work offline with zero setup.
 
-This is a schema-matching *empty* database, not a copy of real data — good for exercising code paths and the recurrence engine, not for working with actual to-dos/prayer requests offline.
+This is a schema-matching *empty* database, not a copy of real data — good for exercising code paths and the recurrence engine, not for working with actual to-dos requests offline.
