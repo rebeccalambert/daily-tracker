@@ -36,7 +36,7 @@ function App() {
   }
 
   function checkDailyPrompts() {
-    if (!daily.mainTaskSource) {
+    if (!daily.mainTaskText) {
       setShowMorning(true)
     }
   }
@@ -63,8 +63,8 @@ function App() {
     }
   }
 
-  function handleMorningConfirm(text: string, source: 'calendar' | 'manual') {
-    persistDaily({ mainTaskText: text, mainTaskSource: source })
+  function handleMorningConfirm(text: string) {
+    persistDaily({ mainTaskText: text })
     setShowMorning(false)
   }
 
