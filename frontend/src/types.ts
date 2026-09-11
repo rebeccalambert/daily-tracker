@@ -1,14 +1,3 @@
-export type TodoType = 'daily' | 'todo'
-
-export interface TodoItem {
-  id: string
-  text: string
-  type: TodoType
-  dueDate?: string
-  notes?: string
-  completed: boolean
-}
-
 export interface DailyState {
   date: string
   mainTaskText: string

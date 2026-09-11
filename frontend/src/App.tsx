@@ -7,7 +7,7 @@ import HamburgerMenu from './components/HamburgerMenu'
 import MorningModal from './components/MorningModal'
 import { isBackendConnected } from './lib/itemsApi'
 import { getDailyState, updateDailyState } from './lib/dailyState'
-import { todayISO, addDays } from './lib/date'
+import { todayISO } from './lib/date'
 import type { DailyState } from './types'
 import './App.css'
 
@@ -79,9 +79,7 @@ function App() {
       </header>
 
       <main className="content">
-        {tab === 'home' && (
-          <Home daily={daily} onPersist={persistDaily} />
-        )}
+        {tab === 'home' && <Home daily={daily} />}
         {tab === 'todos' && <TodosTab />}
         {tab === 'calendar' && <CalendarTab />}
         {tab === 'settings' && (
