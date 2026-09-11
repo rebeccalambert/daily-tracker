@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { getItems, createItem, updateItem, deleteItem, isBackendConnected } from '../lib/itemsApi'
-import { todayISO, formatShortDate } from '../lib/date'
+import { todayISO, formatOnceDue, type DueInfo } from '../lib/date'
 import { RECURRENCES, WEEKDAYS, type Item, type Recurrence } from '@daily-tracker/shared'
 
 const MONTHS = [
@@ -36,18 +36,6 @@ function describeCadence(item: Item): string {
     default:
       return ''
   }
-}
-
-interface DueInfo {
-  text: string
-  overdue: boolean
-}
-
-function formatOnceDue(dueDate: string | null, today: string): DueInfo {
-  if (!dueDate) return { text: '', overdue: false }
-  if (dueDate === today) return { text: 'Due today', overdue: false }
-  if (dueDate < today) return { text: `Overdue · ${formatShortDate(dueDate)}`, overdue: true }
-  return { text: `Due ${formatShortDate(dueDate)}`, overdue: false }
 }
 
 interface FormState {
