@@ -21,7 +21,6 @@ The recurring problem: no single daily record of what got done, what didn't, and
 - **Prayer Requests**: full management for Daily, Weekly (pinned to a weekday), or one-off Date requests, with an optional expiry, sorted by next relevance.
 - **To-Dos**: Habitica-synced, with a backlog for undated items, everything else sorted by due date, and inline editing.
 - **Calendar**: an hourly day view merged from Google Calendar, with overlap-aware event layout.
-- **Google Sheets log**: the app finds or creates its own spreadsheet and appends one row per day. That sheet doubles as browsable history and as the sync store for prayer requests and daily state across devices.
 - **Per-feature visibility**: Prayer, To-Dos, and Calendar can each be hidden from Settings, for anyone who only wants a subset.
 - **Demo Mode**: a fully isolated storage namespace seeded with fixture data, built specifically so this can be reviewed without connecting real accounts. See *Engineering notes* below for why this was worth building properly instead of faking with screenshots.
 
@@ -50,7 +49,6 @@ React 19, TypeScript (strict), Vite 8, `vite-plugin-pwa`. No CSS framework: hand
 
 - **`ITEM_MODEL_SPEC.md`** is the data-model spec and bird's-eye build plan for the backend rebuild in progress: replacing Habitica with a self-designed REST API. Schema, recurrence rules, resolved edge cases, and the reasoning behind each call.
 - **Feature-branch + PR workflow**, solo project or not. See the closed PRs in this repo's history: habits worth keeping regardless of team size.
-- **Demo Mode is a real isolated namespace, not a hardcoded screenshot.** Flipping it on swaps every `localStorage` read/write to a separate key prefix, seeds it with fixture data shaped exactly like real Habitica/Sheets responses, and swaps back cleanly. Built so a reviewer (or a future me) can exercise the actual app logic, not a mockup of it.
 - **Two real bugs, root-caused rather than papered over:** a stale-state bug from two components reading storage independently (fixed by lifting state to a single source of truth), and a Google API failure that turned out to be a Cloud Console configuration gap, not a code bug.
 
 ## Getting started
