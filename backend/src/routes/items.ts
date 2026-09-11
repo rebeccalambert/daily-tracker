@@ -34,7 +34,7 @@ const PATCHABLE_FIELDS = [
 
 const DATE_FIELDS = new Set(['dueDate', 'completedAt'])
 
-// GET /items?type=todo|prayer — list, with the lazy cycle-reset applied.
+// GET /items?type=todo — list, with the lazy cycle-reset applied.
 itemsRouter.get('/', async (req, res) => {
   const { type } = req.query
 

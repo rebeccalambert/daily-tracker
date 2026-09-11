@@ -2,18 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 
 interface HamburgerMenuProps {
   onSelectSettings: () => void
-  onSelectPrayer: () => void
   onSelectCalendar: () => void
-  showPrayer: boolean
-  showCalendar: boolean
 }
 
 export default function HamburgerMenu({
   onSelectSettings,
-  onSelectPrayer,
   onSelectCalendar,
-  showPrayer,
-  showCalendar,
 }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -47,28 +41,16 @@ export default function HamburgerMenu({
       </button>
       {open && (
         <div className="menu-dropdown">
-          {showPrayer && (
-            <button
-              className="menu-item"
-              onClick={() => {
-                setOpen(false)
-                onSelectPrayer()
-              }}
-            >
-              Prayer Requests
-            </button>
-          )}
-          {showCalendar && (
-            <button
-              className="menu-item"
-              onClick={() => {
-                setOpen(false)
-                onSelectCalendar()
-              }}
-            >
-              Calendar
-            </button>
-          )}
+          <button
+            className="menu-item"
+            onClick={() => {
+              setOpen(false)
+              onSelectCalendar()
+            }}
+          >
+            Calendar
+          </button>
+  
           <button
             className="menu-item"
             onClick={() => {

@@ -4,7 +4,7 @@
 // both sides import this .ts source directly (Vite and tsx both handle that
 // natively), so there's no dist/ to keep in sync.
 
-export type ItemType = 'todo' | 'prayer' // 'prayer' is being retired — see Ticket 6
+export type ItemType = 'todo'
 export type Recurrence = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export interface Item {
@@ -38,4 +38,4 @@ export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
 
 export const RECURRENCES: Recurrence[] = ['once', 'daily', 'weekly', 'monthly', 'yearly']
 
-export const ITEM_TYPES: ItemType[] = ['todo', 'prayer'] // 'prayer' retiring — see Ticket 6
+export const ITEM_TYPES: ItemType[] = ['todo']
