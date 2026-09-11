@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
-import { getItems, createItem, updateItem, isBackendConnected } from '../lib/itemsApi'
+import { getItems, createItem, updateItem, deleteItem, isBackendConnected } from '../lib/itemsApi'
 import { todayISO, formatShortDate } from '../lib/date'
 import { RECURRENCES, WEEKDAYS, type Item, type Recurrence } from '@daily-tracker/shared'
 
@@ -157,6 +157,16 @@ export default function TodosTab() {
     }
   }
 
+  async function handleDelete(item: Item) {
+    const snapshot = items
+    setItems(prev => prev.filter(i => i.id !== item.id))
+    try {
+      await deleteItem(item.id)
+    } catch {
+      setItems(snapshot)
+    }
+  }
+
   // Memoized (and computed before the early returns below, so hook order stays consistent across
   // renders) so typing in the add/edit form doesn't re-filter/re-sort every keystroke.
   const backlog = useMemo(() => items.filter(i => i.recurrence === 'once' && !i.dueDate), [items])
@@ -204,6 +214,9 @@ export default function TodosTab() {
           {item.text} <span className={`due${due.overdue ? ' overdue' : ''}`}>{due.text}</span>
           {item.notes && <span className="note">{item.notes}</span>}
         </label>
+        <button type="button" className="delete-btn" aria-label={`Delete ${item.text}`} onClick={() => handleDelete(item)}>
+          ×
+        </button>
       </li>
     )
   }

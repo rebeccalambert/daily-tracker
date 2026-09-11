@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../prisma.js'
-import { applyCycleReset, chicagoToday, todayAsStoredDate } from '../lib/recurrence.js'
+import { applyCycleReset, chicagoToday, formatStoredDate, todayAsStoredDate } from '../lib/recurrence.js'
 import { ITEM_TYPES, RECURRENCES } from '@daily-tracker/shared'
 
 export const itemsRouter = Router()
@@ -10,6 +10,20 @@ export const itemsRouter = Router()
 // this also narrows the checked value to T afterward, unlike a plain cast.
 function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
   return typeof value === 'string' && (values as readonly string[]).includes(value)
+}
+
+// Prisma's @db.Date columns (dueDate, completedAt) come back as JS Date
+// objects; res.json() would otherwise serialize them via toISOString() as
+// full datetime strings, not the plain YYYY-MM-DD the shared Item type
+// promises. Every response that returns an item must go through this.
+function serializeItem<T extends { dueDate: Date | null; completedAt: Date | null }>(
+  item: T
+): Omit<T, 'dueDate' | 'completedAt'> & { dueDate: string | null; completedAt: string | null } {
+  return {
+    ...item,
+    dueDate: item.dueDate ? formatStoredDate(item.dueDate) : null,
+    completedAt: item.completedAt ? formatStoredDate(item.completedAt) : null,
+  }
 }
 
 // Fields a client is allowed to set via PATCH. Raw/dumb pass-through, with
@@ -52,7 +66,7 @@ itemsRouter.get('/', async (req, res) => {
   // completed flag gets recomputed per item; nothing is hidden or written
   // back to the database.
   const today = chicagoToday()
-  res.json(items.map((item) => applyCycleReset(item, today)))
+  res.json(items.map((item) => serializeItem(applyCycleReset(item, today))))
 })
 
 // POST /items — create. Only the fields that make sense for every item are
@@ -85,7 +99,7 @@ itemsRouter.post('/', async (req, res) => {
       sortIndex: typeof sortIndex === 'number' ? sortIndex : 0,
     },
   })
-  res.status(201).json(item)
+  res.status(201).json(serializeItem(item))
 })
 
 // PATCH /items/:id — partial update. Whatever allowed fields are present in
@@ -120,7 +134,7 @@ itemsRouter.patch('/:id', async (req, res) => {
 
   try {
     const item = await prisma.item.update({ where: { id }, data })
-    res.json(item)
+    res.json(serializeItem(item))
   } catch (err: any) {
     if (err.code === 'P2025') {
       return res.status(404).json({ error: 'Item not found' })
