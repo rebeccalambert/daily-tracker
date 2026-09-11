@@ -2,11 +2,11 @@
 
 Companion to `README.md`: the data model for the backend rebuild that replaces Habitica as the source of truth for To-Dos. Worked out field by field, with the reasoning kept alongside each call, before any backend code was written. Also doubles as the bird's-eye build plan this project is being worked against.
 
-**Status:** core model locked. Build in progress; see the project board for current phase.
+**Status:** backend live and deployed. To-Dos work end to end against it. Frontend is mid-rebuild of the Home dashboard around this model — see the project board for current phase.
 
 ## Why one shared model
 
-To-dos turn out to be the same shape wearing a different label: something that either happens once by a date, or recurs on a schedule, and needs to be marked done and eventually un-done again. Rather than two parallel systems, there's one `Item` resource, discriminated by `type`. Both `type` and `recurrence` are plain strings rather than database enums on purpose. Postgres enums are painful to extend later (real migration restrictions), and `type` is explicitly meant to grow past `todo`/`prayer` someday.
+To-dos turn out to be the same shape wearing a different label: something that either happens once by a date, or recurs on a schedule, and needs to be marked done and eventually un-done again. Rather than two parallel systems, there's one `Item` resource, discriminated by `type`. Both `type` and `recurrence` are plain strings rather than database enums on purpose. Postgres enums are painful to extend later (real migration restrictions), and `type` is explicitly meant to grow past `todo` someday — the day's main task is next in line to become a second `type` value instead of living in frontend-only state.
 
 ## Schema
 
@@ -15,10 +15,10 @@ One table. Most fields only mean something for specific `recurrence` values, a d
 | Field | Type | Applies to | Meaning |
 |---|---|---|---|
 | `id` | uuid | all | Primary key. |
-| `type` | string | all | `'todo' \| 'prayer'`, plain string for future expansion. |
+| `type` | string | all | `'todo'` today, plain string for future expansion. |
 | `recurrence` | string | all | `'once' \| 'daily' \| 'weekly' \| 'monthly' \| 'yearly'`. |
-| `text` | string | all | Unifies the old `PrayerRequest.name` / `TodoItem.text` split. |
-| `notes` | string? | all | Unifies old `note` / `notes` naming split. |
+| `text` | string | all | The item's label. |
+| `notes` | string? | all | Optional freeform detail. |
 | `completed` | boolean | all | Current state. Reset automatically for recurring types, see below. |
 | `completedAt` | date? | all | Date last marked done. Drives both the reset logic *and* the "done today" display rule. |
 | `dueDate` | date? | once | Optional. Unset = backlog item (never surfaces on Home). |
@@ -32,7 +32,7 @@ One table. Most fields only mean something for specific `recurrence` values, a d
 
 The whole point of this rebuild: exactly one row per recurring item, ever. Missing five cycles never creates five rows. It's always "is *this* cycle done," never "how many did I miss."
 
-**`once`**: a specific due date, no repeat. Visible on the full To-Dos/Prayer list immediately on creation, due date or not (the backlog). On Home, only once `dueDate <= today`; overdue floats, same as today's app. No due date at all means backlog-only, never appearing on Home. On completion, `completed = true` permanently. No reset, no reappearance, ever.
+**`once`**: a specific due date, no repeat. Visible on the full To-Dos list immediately on creation, due date or not (the backlog). On Home, only once `dueDate <= today`; overdue floats, same as today's app. No due date at all means backlog-only, never appearing on Home. On completion, `completed = true` permanently. No reset, no reappearance, ever.
 
 **`daily`**: resets every calendar day. Visible every day, unconditionally. Resets at the next day boundary: `completed` goes back to `false` regardless of whether it was ever checked. Not checking it off does nothing; it simply stays visible.
 
@@ -55,7 +55,7 @@ No extra field needed. This falls out of `completedAt` for free. Home renders tw
 Not a new idea; the app already works this way for to-dos today. Carried forward as the answer to where `once` items live before they're due.
 
 - **Home**: the daily glance. Shows dailies, active-cycle weekly/monthly/yearly items, and `once` items due today or overdue. Today's completions only.
-- **To-Dos / Prayer tabs**: the full backlog. Every item regardless of due date or cycle state, including undated `once` items waiting for a due date. The future show/hide-done toggle lives here, not on Home.
+- **To-Dos tab**: the full backlog. Every item regardless of due date or cycle state, including undated `once` items waiting for a due date. The future show/hide-done toggle lives here, not on Home.
 
 ## Edge cases (resolved)
 
@@ -80,7 +80,7 @@ The same formula, applied to `month` + `dayOfMonth` together, resolves the Feb 2
 One definition, imported by both the Express API and the React front end: the actual payoff of a single-language stack.
 
 ```typescript
-type ItemType = 'todo' | 'prayer'
+type ItemType = 'todo'
 type Recurrence = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 interface Item {
@@ -101,7 +101,7 @@ interface Item {
 }
 ```
 
-**Note on `sortIndex`:** this used to live in `DailyState.homeTodoOrder`, a fresh array recreated *per day*. Items are no longer recreated daily (a weekly item is the same row across weeks), so ordering moves onto the item itself. Scoped implicitly per `type`, since to-dos and prayer requests are never displayed in one merged list.
+**Note on `sortIndex`:** this used to live in `DailyState.homeTodoOrder`, a fresh array recreated *per day*. Items are no longer recreated daily (a weekly item is the same row across weeks), so ordering moves onto the item itself, scoped implicitly per `type`.
 
 ## REST surface
 
@@ -111,7 +111,7 @@ An earlier pass at this reached for a full `User` model out of habit, the conven
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/items?type=todo\|prayer` | List items. Server applies the lazy cycle-reset before returning. |
+| `GET` | `/items?type=todo` | List items. Server applies the lazy cycle-reset before returning. |
 | `POST` | `/items` | Create an item. |
 | `PATCH` | `/items/:id` | Update fields, toggling `completed`, editing text/notes/dueDate, reordering via `sortIndex`. |
 | `DELETE` | `/items/:id` | Remove an item outright, distinct from marking it done. |
@@ -120,19 +120,19 @@ An earlier pass at this reached for a full `User` model out of habit, the conven
 
 Node + Express + TypeScript, Prisma as the ORM, Postgres hosted on Neon's free tier (permanent, not a trial; scale-to-zero after 5 min idle, fast resume). API deployed on Render's free tier (known trade-off: cold start after inactivity). `type`/`recurrence` as plain string columns, not Postgres enums, to stay extensible.
 
-Deliberately **not** in this rebuild: websockets or any real-time sync. Phone and laptop both just refetch after mutation and on load, which is enough for a single user. The daily log stays on Google Sheets, untouched. Calendar integration stays untouched. Habitica is removed entirely, not kept as an optional import.
+Deliberately **not** in this rebuild: websockets or any real-time sync. Phone and laptop both just refetch after mutation and on load, which is enough for a single user. Google Calendar integration is frontend-only (read-only, via the Google Calendar API) and has no relationship to this backend at all. Habitica, the Google Sheets daily log, and Prayer Requests are removed entirely — not kept as an optional import, not migrated.
 
 ## Decisions log
 
-- **Field naming:** `type` = `todo`/`prayer` (not `kind`); `recurrence` = the cadence, to avoid colliding with the existing `PrayerType`/`TodoType` convention.
+- **Field naming:** `type` (not `kind`) for the item's category; `recurrence` for the cadence.
 - **No pileup, ever:** one row per recurring item regardless of how many cycles were missed. The entire point of dropping Habitica.
 - **Reset is lazy, not cron-driven:** computed on read by comparing `completedAt`'s cycle to the current cycle. No scheduler to maintain, no external reset process to fight.
 - **`once` items:** visible on the full list immediately; visible on Home only once due (or overdue); completion is permanent.
 - **Auth:** real login gating one password, not one account. `PASSWORD_HASH` env var (Node's built-in `crypto.scrypt`), no `User` table. Went through a detour where a `User` model got added out of habit, before it was clear a single-row "accounts table" wasn't solving any real problem here.
 - **Sync:** refetch-based, no websockets. Explicitly ruled out as unnecessary scope.
-- **Scope boundary:** only to-dos and prayer requests move to the new backend. Daily log (Sheets) and Calendar stay exactly as they are.
+- **Scope boundary:** only to-dos move to this backend today; the day's main task is next (see the project board), as a second `type` value rather than a new resource. Prayer Requests, the Google Sheets daily log, and the evening-review flow were removed from the product entirely on 2026-09-11. Google Calendar integration is frontend-only and out of this backend's scope regardless.
 - **Day-of-month clamping:** `effectiveDay = min(dayOfMonth, daysInThatMonth)`, recomputed every cycle. Self-corrects back to the pinned day the next time a long-enough month comes around, rather than drifting or getting stuck.
 
 ---
 
-*Last updated 2026-08-28.*
+*Last updated 2026-09-11.*
