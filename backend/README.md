@@ -1,10 +1,27 @@
 # Backend
 
-Not yet scaffolded — this is where Ticket 1 of the backend rebuild starts (see the `Daily — Backend Rebuild` board, or `../ITEM_MODEL_SPEC.md` for the data model this API will implement).
+Express + TypeScript + Prisma API, deployed and live on Render, backing the To-Dos feature over a Postgres database on Neon. Replaces Habitica as the source of truth for to-dos — see `../ITEM_MODEL_SPEC.md` for the data model this API implements.
 
-Planned stack: Node + Express + TypeScript, Prisma as the ORM, Postgres hosted on Neon, deployed on Render. Auth is a single shared API key — see `ITEM_MODEL_SPEC.md` for why.
+Built on the `rebuild` branch (with per-ticket sub-branches like `t5`, `t6`, `t7` merged into it as work lands), off of which this repo split into `frontend/` + `backend/` + `shared/`. `main` stays on the pre-rebuild, Habitica-based version with no backend at all until the whole rebuild is verified end to end and merged (the final ticket on the project board).
 
-Being built on `feature/backend-rebuild`, off of which this repo split into `frontend/` + `backend/` (see `chore/monorepo-init`). `main` stays on the pre-rebuild, Habitica-based version until the whole thing is verified end to end.
+Auth is real login: one server-side `PASSWORD_HASH` env var, checked on `POST /login`, which issues a signed JWT that every other route requires. No `User` table, no accounts system — see `../ITEM_MODEL_SPEC.md`'s REST surface section for the full reasoning (this replaced an earlier plan for a single shared API key, before real per-request auth turned out to matter).
+
+## Getting started
+
+```bash
+npm install                  # from repo root, or from backend/ directly
+```
+
+No dedicated `.env.example` exists yet for the real Neon config (only `.env.local.example`, for the offline setup below) — create `.env` by hand with `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (pointing at your own Neon project's pooled and direct connection strings), plus `JWT_SECRET` and `PASSWORD_HASH` (generate the latter with `npm run hash-password`, next). `.env.local.example` shows the shape.
+
+```bash
+npm run hash-password         # generates PASSWORD_HASH for whatever password you want to gate the API with
+npm run prisma:generate
+npm run prisma:migrate        # applies the schema to whichever database DATABASE_URL points at
+npm run dev                   # tsx watch src/index.ts
+```
+
+Other scripts: `npm run build` (tsc), `npm run test` (vitest — see `src/lib/recurrence.test.ts`), `npm run smoke-test` (a scripted end-to-end auth + CRUD check against a running server).
 
 ## Offline dev
 

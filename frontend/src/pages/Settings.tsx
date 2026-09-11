@@ -87,7 +87,7 @@ export default function Settings({ onConnectionsChanged }: SettingsProps) {
       </div>
 
       <div className="settings-group">
-        <h3>Google — Calendar, Sheets</h3>
+        <h3>Google Calendar</h3>
         <div className="settings-status">
           <span className={`status-dot${googleConnected ? ' connected' : ''}`} />
           <span>{googleConnected ? 'Connected' : 'Not connected'}</span>
