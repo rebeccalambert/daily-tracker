@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { applyCycleReset, cycleKey, daysInMonth, effectiveDay, type DateParts, type RecurrenceFields } from './recurrence.js'
+import {
+  applyCycleReset,
+  cycleKey,
+  daysInMonth,
+  effectiveDay,
+  formatStoredDate,
+  type DateParts,
+  type RecurrenceFields,
+} from './recurrence.js'
 
 // Helper: build a DateParts from a UTC calendar date (weekday derived for you).
 function parts(year: number, month: number, day: number): DateParts {
@@ -23,6 +31,24 @@ function item(overrides: Partial<RecurrenceFields>): RecurrenceFields {
     ...overrides,
   }
 }
+
+describe('formatStoredDate', () => {
+  it('formats a plain YYYY-MM-DD string, not an ISO datetime', () => {
+    expect(formatStoredDate(storedDate(2026, 9, 15))).toBe('2026-09-15')
+  })
+
+  it('pads single-digit month and day', () => {
+    expect(formatStoredDate(storedDate(2026, 1, 5))).toBe('2026-01-05')
+  })
+
+  it('reads the UTC calendar date, not a timezone-shifted one', () => {
+    // A naive toISOString()-based approach would be indistinguishable from
+    // this for a UTC-midnight Date, but storedDateParts' UTC getters are the
+    // documented-correct approach (see recurrence.ts) - this guards against
+    // a future refactor accidentally routing through local/Chicago time.
+    expect(formatStoredDate(storedDate(2026, 12, 31))).toBe('2026-12-31')
+  })
+})
 
 describe('daysInMonth / effectiveDay', () => {
   it('matches the spec table for dayOfMonth=31', () => {

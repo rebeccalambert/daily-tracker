@@ -81,6 +81,15 @@ export function storedDateParts(date: Date): DateParts {
   }
 }
 
+// Formats a stored @db.Date value (dueDate, completedAt) as a plain
+// YYYY-MM-DD string - the wire format the shared Item type promises.
+// Reuses storedDateParts' UTC getters rather than toISOString(), which would
+// include a time/offset the frontend's date logic doesn't expect.
+export function formatStoredDate(date: Date): string {
+  const { year, month, day } = storedDateParts(date)
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
 export function daysInMonth(year: number, month1to12: number): number {
   return new Date(Date.UTC(year, month1to12, 0)).getUTCDate()
 }
