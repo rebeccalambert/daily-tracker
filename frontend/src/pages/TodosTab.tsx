@@ -89,6 +89,7 @@ export default function TodosTab() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
   const [backlogOpen, setBacklogOpen] = useState(false)
+  const [completedOpen, setCompletedOpen] = useState(false)
 
   function refresh() {
     if (!isBackendConnected()) {
@@ -137,11 +138,13 @@ export default function TodosTab() {
   }
 
   async function toggleDone(item: Item) {
-    setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: !i.completed } : i)))
+    const completed = !item.completed
+    const completedAt = completed ? today : item.completedAt
+    setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed, completedAt } : i)))
     try {
-      await updateItem(item.id, { completed: !item.completed })
+      await updateItem(item.id, { completed })
     } catch {
-      setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: item.completed } : i)))
+      setItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: item.completed, completedAt: item.completedAt } : i)))
     }
   }
 
@@ -157,23 +160,32 @@ export default function TodosTab() {
 
   // Memoized (and computed before the early returns below, so hook order stays consistent across
   // renders) so typing in the add/edit form doesn't re-filter/re-sort every keystroke.
-  const backlog = useMemo(() => items.filter(i => i.recurrence === 'once' && !i.dueDate), [items])
+  //
+  // Completed items move to their own section
+  const visible = useMemo(() => items.filter(i => !i.completed || i.completedAt === today), [items, today])
+  const pending = useMemo(() => visible.filter(i => !i.completed), [visible])
+  const completedToday = useMemo(
+    () => visible.filter(i => i.completed).slice().sort((a, b) => a.text.localeCompare(b.text)),
+    [visible]
+  )
+
+  const backlog = useMemo(() => pending.filter(i => i.recurrence === 'once' && !i.dueDate), [pending])
   const dated = useMemo(
     () =>
-      items
+      pending
         .filter(i => i.recurrence === 'once' && !!i.dueDate)
         .slice()
         .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')),
-    [items]
+    [pending]
   )
   const byRecurrence = useMemo(() => {
     const group = (r: Recurrence) =>
-      items
+      pending
         .filter(i => i.recurrence === r)
         .slice()
         .sort((a, b) => a.text.localeCompare(b.text))
     return { daily: group('daily'), weekly: group('weekly'), monthly: group('monthly'), yearly: group('yearly') }
-  }, [items])
+  }, [pending])
 
   if (status === 'not-connected') {
     return (
@@ -361,6 +373,19 @@ export default function TodosTab() {
           <p className="group-label">Yearly</p>
           <ul className="todo-list">{byRecurrence.yearly.map(item => renderItem(item))}</ul>
         </>
+      )}
+
+      {completedToday.length > 0 && (
+        <div className="section" data-open={completedOpen}>
+          <button className="section-header" aria-expanded={completedOpen} onClick={() => setCompletedOpen(o => !o)}>
+            Completed Today <span className="chevron">›</span>
+          </button>
+          {completedOpen && (
+            <div className="section-body">
+              <ul className="todo-list">{completedToday.map(item => renderItem(item))}</ul>
+            </div>
+          )}
+        </div>
       )}
     </section>
   )

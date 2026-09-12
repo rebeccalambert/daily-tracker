@@ -294,6 +294,10 @@ button:disabled {
   flex-shrink: 0;
 }
 
+.drag-handle:active {
+  cursor: grabbing;
+}
+
 .todo-item input[type="checkbox"] {
   margin-top: 3px;
   width: 16px;
