@@ -222,6 +222,12 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+.event-entry + .event-entry {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
 .upcoming-line {
   font-size: 13px;
   color: var(--muted);
@@ -250,7 +256,11 @@ button:disabled {
   gap: 4px;
 }
 
-.section {
+.home-section {
+  border-top: 1px solid var(--line);
+}
+
+.todo-section {
   border-bottom: 1px solid var(--line);
 }
 
@@ -261,7 +271,6 @@ button:disabled {
   align-items: center;
   background: none;
   border: none;
-  padding: 14px 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--ink);

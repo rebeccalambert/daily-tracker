@@ -135,14 +135,14 @@ export default function Home({ daily }: HomeProps) {
           <p className="section-header">Calendar</p>
             <div className="event-card">
               <p className="eyebrow">Happening now</p>
-                {currentEvents.map(e => (
-                  <>
-                    <p className="event-title">{e.title}</p>
-                    <p className="event-time">
-                      {formatEventTime(e.start!)}–{formatEventTime(e.end!)}
-                    </p>
-                  </>
-                ))}
+              {currentEvents.map(e => (
+                <div className="event-entry" key={e.id}>
+                  <p className="event-title">{e.title}</p>
+                  <p className="event-time">
+                    {formatEventTime(e.start!)}–{formatEventTime(e.end!)}
+                  </p>
+                </div>
+              ))}
             </div>
           {nextEvent ? (
             <>
@@ -173,20 +173,20 @@ export default function Home({ daily }: HomeProps) {
         </div>
       )}
 
-      <div className="section">
+      <div className="home-section">
         <p className="section-header">To-Dos</p>
-        {status === 'loading' && <p className="tab-caption">Loading…</p>}
-        {status === 'error' && <p className="tab-caption">Couldn't load to-dos.</p>}
-        {status === 'ready' && pending.length === 0 && <p className="tab-caption">All done!</p>}
-        {status === 'ready' && pending.length > 0 && (
-          <SortableList
-            items={pending}
-            onReorder={handleReorder}
-            className="todo-list"
-            itemClassName="todo-item"
-            renderItem={renderRow}
-          />
-        )}
+          {status === 'loading' && <p className="tab-caption">Loading…</p>}
+          {status === 'error' && <p className="tab-caption">Couldn't load to-dos.</p>}
+          {status === 'ready' && pending.length === 0 && <p className="tab-caption">All done!</p>}
+          {status === 'ready' && pending.length > 0 && (
+            <SortableList
+              items={pending}
+              onReorder={handleReorder}
+              className="todo-list"
+              itemClassName="todo-item"
+              renderItem={renderRow}
+            />
+          )}
       </div>
     </section>
   )
