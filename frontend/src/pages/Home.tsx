@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-// import { getTodayEvents, formatEventTime, type DayEvent } from '../lib/calendarDay'
-// import { isGoogleConnected } from '../lib/googleAuth'
+import { getTodayEvents, formatEventTime, type DayEvent } from '../lib/calendarDay'
+import { isGoogleConnected } from '../lib/googleAuth'
 import { getItems, updateItem } from '../lib/itemsApi'
 import { todayISO, formatOnceDue } from '../lib/date'
 import SortableList from '../components/SortableList'
@@ -24,6 +24,9 @@ export default function Home({ daily }: HomeProps) {
   const today = todayISO()
   const [todos, setTodos] = useState<Item[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [events, setEvents] = useState<DayEvent[]>([])
+  const [eventsStatus, setEventsStatus] = useState<'loading' | 'ready' | 'not-connected' | 'error'>('loading')
+  const [now, setNow] = useState(() => new Date())
 
   function refresh() {
     getItems('todo')
@@ -35,6 +38,33 @@ export default function Home({ daily }: HomeProps) {
   }
 
   useEffect(refresh, [])
+
+  useEffect(() => {
+    if (!isGoogleConnected()) {
+      setEventsStatus('not-connected')
+      return
+    }
+    getTodayEvents(today)
+      .then(result => {
+        setEvents(result)
+        setEventsStatus('ready')
+      })
+      .catch(() => setEventsStatus('error'))
+  }, [today])
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Timed events only — an all-day event is never "happening right now"
+  const timedEvents = useMemo(() => events.filter(e => !e.allDay && e.start && e.end), [events])
+  const currentEvent = useMemo(
+    () => timedEvents.find(e => e.start! <= now && now <= e.end!) ?? null,
+    [timedEvents, now]
+  )
+  // timedEvents is sorted ascending by start 
+  const nextEvent = useMemo(() => timedEvents.find(e => e.start! > now) ?? null, [timedEvents, now])
 
   const pending = useMemo(
     () => todos.filter(item => isPendingOnHome(item, today)).sort((a, b) => a.sortIndex - b.sortIndex),
@@ -91,7 +121,30 @@ export default function Home({ daily }: HomeProps) {
         <p className="main-task-text">{daily.mainTaskText || 'Not set yet'}</p>
       </div>
 
-      {/* TODO: read-only Calendar widget — Ticket 9 */}
+      {eventsStatus === 'loading' && <p className="tab-caption">Loading calendar…</p>}
+      {eventsStatus === 'error' && <p className="tab-caption">Couldn't load your calendar.</p>}
+      {eventsStatus === 'ready' && (
+        <div className="calendar-widget">
+          <p className="section-header">Calendar</p>
+          {currentEvent && (
+            <div className="event-card">
+              <p className="eyebrow">Happening now</p>
+              <p className="event-title">{currentEvent.title}</p>
+              <p className="event-time">
+                {formatEventTime(currentEvent.start!)}–{formatEventTime(currentEvent.end!)}
+              </p>
+            </div>
+          )}
+          {nextEvent ? (
+            <p className="upcoming-line">
+              <span className="upcoming-label">{currentEvent ? 'Next' : 'Upcoming'}</span>
+              {nextEvent.title} · {formatEventTime(nextEvent.start!)}
+            </p>
+          ) : (
+            !currentEvent && <p className="tab-caption">Nothing else on your calendar today.</p>
+          )}
+        </div>
+      )}
 
       <div className="section">
         <p className="section-header">To-Dos</p>
