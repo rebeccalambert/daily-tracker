@@ -328,7 +328,7 @@ export default function TodosTab() {
       )}
 
       {backlog.length > 0 && (
-        <div className="section" data-open={backlogOpen}>
+        <div className="todo-section" data-open={backlogOpen}>
           <button className="section-header" aria-expanded={backlogOpen} onClick={() => setBacklogOpen(o => !o)}>
             Backlog <span className="chevron">›</span>
           </button>
@@ -376,7 +376,7 @@ export default function TodosTab() {
       )}
 
       {completedToday.length > 0 && (
-        <div className="section" data-open={completedOpen}>
+        <div className="home-section" data-open={completedOpen}>
           <button className="section-header" aria-expanded={completedOpen} onClick={() => setCompletedOpen(o => !o)}>
             Completed Today <span className="chevron">›</span>
           </button>

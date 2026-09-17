@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-// import { getTodayEvents, formatEventTime, type DayEvent } from '../lib/calendarDay'
-// import { isGoogleConnected } from '../lib/googleAuth'
+import { getTodayEvents, formatEventTime, type DayEvent } from '../lib/calendarDay'
+import { isGoogleConnected } from '../lib/googleAuth'
 import { getItems, updateItem } from '../lib/itemsApi'
 import { todayISO, formatOnceDue } from '../lib/date'
 import SortableList from '../components/SortableList'
@@ -24,6 +24,10 @@ export default function Home({ daily }: HomeProps) {
   const today = todayISO()
   const [todos, setTodos] = useState<Item[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [events, setEvents] = useState<DayEvent[]>([])
+  const [eventsStatus, setEventsStatus] = useState<'loading' | 'ready' | 'not-connected' | 'error'>('loading')
+  const [now, setNow] = useState(() => new Date())
+  const [moreEventsOpen, setMoreEventsOpen] = useState(false)
 
   function refresh() {
     getItems('todo')
@@ -35,6 +39,36 @@ export default function Home({ daily }: HomeProps) {
   }
 
   useEffect(refresh, [])
+
+  useEffect(() => {
+    if (!isGoogleConnected()) {
+      setEventsStatus('not-connected')
+      return
+    }
+    getTodayEvents(today)
+      .then(result => {
+        setEvents(result)
+        setEventsStatus('ready')
+      })
+      .catch(() => setEventsStatus('error'))
+  }, [today])
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Timed events only — an all-day event is never "happening right now"
+  const timedEvents = useMemo(() => events.filter(e => !e.allDay && e.start && e.end), [events])
+  // Every event currently in progress
+  const currentEvents = useMemo(
+    () => timedEvents.filter(e => e.start! <= now && now <= e.end!),
+    [timedEvents, now]
+  )
+  // timedEvents is sorted ascending by start
+  const upcomingEvents = useMemo(() => timedEvents.filter(e => e.start! > now), [timedEvents, now])
+  const nextEvent = upcomingEvents[0] ?? null
+  const laterEvents = upcomingEvents.slice(1)
 
   const pending = useMemo(
     () => todos.filter(item => isPendingOnHome(item, today)).sort((a, b) => a.sortIndex - b.sortIndex),
@@ -91,22 +125,68 @@ export default function Home({ daily }: HomeProps) {
         <p className="main-task-text">{daily.mainTaskText || 'Not set yet'}</p>
       </div>
 
-      {/* TODO: read-only Calendar widget — Ticket 9 */}
+      {eventsStatus === 'loading' && <p className="tab-caption">Loading calendar…</p>}
+      {eventsStatus === 'not-connected' && (
+        <p className="tab-caption">Connect Google in Settings to see today's calendar here.</p>
+      )}
+      {eventsStatus === 'error' && <p className="tab-caption">Couldn't load your calendar.</p>}
+      {eventsStatus === 'ready' && (
+        <div className="calendar-widget">
+          <p className="section-header">Calendar</p>
+            <div className="event-card">
+              <p className="eyebrow">Happening now</p>
+              {currentEvents.map(e => (
+                <div className="event-entry" key={e.id}>
+                  <p className="event-title">{e.title}</p>
+                  <p className="event-time">
+                    {formatEventTime(e.start!)}–{formatEventTime(e.end!)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          {nextEvent ? (
+            <>
+              <p className="upcoming-line">
+                <span className="upcoming-label">{currentEvents.length > 0 ? 'Next' : 'Upcoming'}</span>
+                {nextEvent.title} · {formatEventTime(nextEvent.start!)}
+              </p>
+              {laterEvents.length > 0 && (
+                <>
+                  <span className="upcoming-label button" onClick={() => setMoreEventsOpen(o => !o)}>
+                    {moreEventsOpen ? 'LESS' : 'MORE'}
+                  </span>
+                  {moreEventsOpen && (
+                    <ul className="upcoming-list">
+                      {laterEvents.map(e => (
+                        <li key={e.id} className="upcoming-line">
+                          {e.title} · {formatEventTime(e.start!)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            currentEvents.length === 0 && <p className="tab-caption">Nothing else on your calendar today.</p>
+          )}
+        </div>
+      )}
 
-      <div className="section">
+      <div className="home-section">
         <p className="section-header">To-Dos</p>
-        {status === 'loading' && <p className="tab-caption">Loading…</p>}
-        {status === 'error' && <p className="tab-caption">Couldn't load to-dos.</p>}
-        {status === 'ready' && pending.length === 0 && <p className="tab-caption">All done!</p>}
-        {status === 'ready' && pending.length > 0 && (
-          <SortableList
-            items={pending}
-            onReorder={handleReorder}
-            className="todo-list"
-            itemClassName="todo-item"
-            renderItem={renderRow}
-          />
-        )}
+          {status === 'loading' && <p className="tab-caption">Loading…</p>}
+          {status === 'error' && <p className="tab-caption">Couldn't load to-dos.</p>}
+          {status === 'ready' && pending.length === 0 && <p className="tab-caption">All done!</p>}
+          {status === 'ready' && pending.length > 0 && (
+            <SortableList
+              items={pending}
+              onReorder={handleReorder}
+              className="todo-list"
+              itemClassName="todo-item"
+              renderItem={renderRow}
+            />
+          )}
       </div>
     </section>
   )
